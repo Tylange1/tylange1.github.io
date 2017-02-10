@@ -2122,7 +2122,7 @@ angular.module('powerHouseApp')
       else if(increment < 0){
         invalid = true;
       }
-      else if(increment !== 0 && unitService.getCurrentUnit().interval % increment !== 0){
+      else if(increment !== 0 && increment % unitService.getCurrentUnit().interval !== 0){
         invalid = true;
       }
 
