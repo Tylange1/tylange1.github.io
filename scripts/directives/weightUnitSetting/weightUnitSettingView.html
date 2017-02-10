@@ -1,0 +1,14 @@
+<div layout="column">
+    <md-input-container class="no-margin-bottom no-margin-top">
+        <div layout="row" layout-align="none center">
+            <div class="padding-right-8" flex="noshrink">
+                <p>Weight unit:</p>
+            </div>
+            <div flex="grow">
+                <md-select ng-model="currentUnit" aria-label="Units">
+                    <md-option ng-repeat="unit in units" ng-selected="unit.name === currentUnit.name" ng-value="unit">{{unit.name}}</md-option>
+                </md-select>
+            </div>
+        </div>
+    </md-input-container>
+</div>

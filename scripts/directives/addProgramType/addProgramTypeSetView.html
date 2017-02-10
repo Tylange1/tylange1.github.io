@@ -1,0 +1,136 @@
+<div layout="column" ng-class="{ 'no-padding-right': true, 'no-padding-left': true, 'no-padding-bottom': true }" layout-padding>
+    <span class="md-subhead">Sets</span>
+    <md-divider></md-divider>
+
+    <md-list ng-if="hasConfirmed()" flex>
+        <md-list-item class="md-2-line secondary-button-padding" ng-repeat="set in programTypeSets" ng-if="set.confirmed === true">
+            <div class="md-list-item-text" layout="column">
+                <h3>Exercise: {{set.exercise.name}}</h3>
+                <span ng-if="set.exercise.exerciseType.id === 0 || set.exercise.exerciseType.id === 1">
+                    <h4>Sets: {{set.numberOfSets}}, Reps: {{set.numberOfReps}}</h4>
+                </span>
+                <span ng-if="set.exercise.exerciseType.id === 2">
+                    <h4>Duration: {{set.duration}}</h4>
+                </span>
+            </div>
+            <div layout="row" class="md-secondary">
+                <md-button class="md-fab md-mini" ng-click="editSet(set)" md-colors="{ background: 'orange-300' }" aria-label="Edit">
+                    <md-icon md-svg-src="images/icons/edit.svg"></md-icon>
+                </md-button>
+                <md-button class="md-fab md-mini" ng-click="removeSet(set)" md-colors="{ background: 'red-300' }" aria-label="Remove">
+                    <md-icon md-svg-src="images/icons/remove.svg"></md-icon>
+                </md-button>
+            </div>
+        </md-list-item>
+    </md-list>
+    
+    <span ng-repeat="set in programTypeSets" ng-if="set.confirmed === false" ng-class="{ 'no-padding-right': true, 'no-padding-left': true }">
+        <form name="programTypeSetForm" layout="column" ng-class="{ 'no-padding-bottom': true }">
+
+            <md-input-container ng-class="{ 'no-margin-top': true }" flex="100">
+                <md-select name="programTypeSetExerciseSelect" ng-model="set.exercise" placeholder="Exercise" required md-no-asterisk="true">
+                    <md-option ng-repeat="exercise in exercises | filter:removeNonComplete" ng-selected="set.exercise.id === exercise.id" ng-value="exercise">{{exercise.name}}</md-option>
+                </md-select>
+                <div ng-messages="programTypeSetForm.programTypeSetExerciseSelect.$error">
+                    <div ng-message="required">An exercise is required.</div>
+                </div>
+            </md-input-container>
+
+            <!-- Number of Sets -->
+            <md-input-container ng-class="{ 'no-margin-top': true, 'no-margin-bottom': true, 'padding-bottom-8': true }" flex="100" ng-if="set.exercise.exerciseType.id === 0 || set.exercise.exerciseType.id === 1">
+                <label>Number of Sets</label>
+                <input name="programTypeSetNumberOfSetsInput" ng-model="set.numberOfSets" type="number" min="1" step="1" required md-no-asterisk="true">
+                <div ng-messages="programTypeSetForm.programTypeSetNumberOfSetsInput.$error">
+                    <div ng-message="required">Number of sets is required.</div>
+                    <div ng-message="type">A number is required.</div>
+                    <div ng-message="min">A number greater than 1 is required.</div>
+                </div>
+            </md-input-container>
+
+            <!-- Number of Reps -->
+            <md-input-container ng-class="{ 'no-margin-top': true, 'no-margin-bottom': true, 'padding-bottom-8': true }" flex="100" ng-if="set.exercise.exerciseType.id === 0 || set.exercise.exerciseType.id === 1">
+                <label>Number of Reps</label>
+                <input name="programTypeSetNumberOfRepsInput" ng-model="set.numberOfReps" type="number" min="1" step="1" required md-no-asterisk="true">
+                <div ng-messages="programTypeSetForm.programTypeSetNumberOfRepsInput.$error">
+                    <div ng-message="required">Number of reps is required.</div>
+                    <div ng-message="type">A number is required.</div>
+                    <div ng-message="min">A number greater than 1 is required.</div>
+                </div>
+            </md-input-container>
+
+            <!-- One Rep Max Percentage -->
+            <md-input-container ng-if="set.exercise.exerciseType.id === 0" ng-class="{ 'no-margin-top': true, 'no-margin-bottom': true, 'padding-bottom-8': true }" flex="100">
+                <div layout="row">
+                    <div flex="grow">
+                        <label>One Rep Max %</label>
+                        <input name="programTypeSetOneRepMaxPercentInput" ng-model="set.oneRepMaxPercent" type="number" min="0" max="100" step="1" required md-no-asterisk="true">
+                        <div ng-messages="programTypeSetForm.programTypeSetOneRepMaxPercentInput.$error">
+                            <div ng-message="required">One rep max is required.</div>
+                            <div ng-message="type">A number is required.</div>
+                            <div ng-message="min">A number greater than 0 is required.</div>
+                            <div ng-message="max">A number less than 100 is required.</div>
+                        </div>
+                    </div>
+                    <div>
+                        <help template-url="helpAddProgramTypeOneRepMaxUrl"></help>
+                    </div>
+                </div>
+            </md-input-container>
+
+            <!-- Increment Multiplier -->
+            <md-input-container ng-if="set.exercise.exerciseType.id === 0" ng-class="{ 'no-margin-top': true, 'no-margin-bottom': true, 'padding-bottom-8': true }" flex="100">
+                <div layout="row">
+                    <div flex="grow">
+                        <label>Increment Multiplier</label>
+                        <input name="programTypeSetIncrementMultiplierInput" ng-model="set.incrementMultiplier" type="number" min="0" step="1" required md-no-asterisk="true">
+                        <div ng-messages="programTypeSetForm.programTypeSetIncrementMultiplierInput.$error">
+                            <div ng-message="required">An Increment multiplier is required.</div>
+                            <div ng-message="type">A number is required.</div>
+                            <div ng-message="min">A number greater than 0 is required.</div>
+                        </div>
+                    </div>
+                    <div>
+                        <help template-url="helpAddProgramTypeIncrementUrl"></help>
+                    </div>
+                </div>
+            </md-input-container>
+
+            <!-- Duration -->
+            <div ng-if="set.exercise.exerciseType.id === 2" layout="row">
+                <!-- Minutes -->
+                <md-input-container ng-class="{ 'no-margin-top': true, 'no-margin-bottom': true, 'padding-bottom-8': true }" flex="100">
+                    <label>Minutes</label>
+                    <input name="programTypeSetMinutesInput" ng-model="set.minutes" type="number" min="0" step="1" required md-no-asterisk="true">
+                    <div ng-messages="programTypeSetForm.programTypeSetMinutesInput.$error">
+                        <div ng-message="required">Minutes are required.</div>
+                        <div ng-message="type">A number is required.</div>
+                        <div ng-message="min">A number greater than 0 is required.</div>
+                    </div>
+                </md-input-container>
+
+                <!-- Seconds -->
+                <md-input-container ng-class="{ 'no-margin-top': true, 'no-margin-bottom': true, 'padding-bottom-8': true }" flex="100">
+                    <label>Seconds</label>
+                    <input name="programTypeSetSecondsInput" ng-model="set.seconds" type="number" min="0" max="59" step="1" required md-no-asterisk="true">
+                    <div ng-messages="programTypeSetForm.programTypeSetSecondsInput.$error">
+                        <div ng-message="required">Seconds are required.</div>
+                        <div ng-message="type">A number is required.</div>
+                        <div ng-message="min">A number greater than 0 is required.</div>
+                        <div ng-message="max">A number less than 59 is required.</div>
+                    </div>
+                </md-input-container>
+            </div>
+
+        </form>
+        <add-remove add-function="confirmSet(set)" remove-function="removeSet(set)" invalid-function="isInvalid(set)" name="'Set'"></add-remove>
+    </span>
+    
+    <div layout="column" ng-class="{ 'no-padding-bottom': true, 'no-padding-top': true }" layout-align="center center">
+        <md-button class="md-primary md-raised" ng-click="addSet()" aria-label="Add Set">
+            <div layout="row" layout-align="center center">
+                <md-icon md-svg-src="images/icons/add.svg"></md-icon>
+                <span flex>Set</span>
+            </div>
+        </md-button>
+    </div>
+</div>

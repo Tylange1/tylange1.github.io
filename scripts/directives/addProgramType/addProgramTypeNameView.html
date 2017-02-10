@@ -1,0 +1,19 @@
+<div layout="column">
+    <md-card>
+        <md-card-header layout-align="none center">
+            <md-card-header-text>Add Program Type</md-card-header-text>
+            <help template-url="helpAddProgramTypeUrl"></help>
+        </md-card-header>
+        <md-card-content ng-class="{ 'no-padding-top' : true, 'no-padding-bottom' : true }">
+            <form name="programTypeDetailsForm" layout="column">
+                <md-input-container flex="100" ng-class="{ 'no-margin-top' : true, 'margin-bottom-8' : true }">
+                    <label>Program Type Name</label>
+                    <input name="programTypeNameInput" ng-model="programTypeName" required md-no-asterisk="true">
+                    <div ng-messages="programTypeDetailsForm.programTypeNameInput.$error">
+                        <div ng-message="required">A program type name is required.</div>
+                    </div>
+                </md-input-container>
+            </form>
+        </md-card-content>
+    </md-card>
+</div>

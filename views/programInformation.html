@@ -1,0 +1,73 @@
+<div layout="column" layout-padding>
+    
+    <div layout="column">
+        <span ng-if="program !== undefined" flex>
+            
+            <!-- HEADER -->
+            <md-list>
+                <md-list-item class="md-3-line background-white margin-bottom-10 no-padding-left no-padding-right" md-whiteframe="2">
+                    <div class="padding-top-24 padding-bottom-16 padding-right-16 padding-left-16" layout="row" flex="100">
+                        <div layout="column" flex>
+                            <div layout="column" flex>
+                                <p class="list-text headline truncate-text">{{program.name}}</p>
+                                <p class="list-text subhead truncate-text">Total Weeks: {{program.weeks.length}}</p>
+                                <p class="list-text subhead truncate-text">Increment: {{program.increment}}{{unit.textName}}</p>
+                            </div>
+                        </div>
+                        <div layout="row" flex="none" layout-align="center start">
+                            <md-button class="md-icon-button" md-colors="{ background: 'orange-300' }" ng-click="editFunction(program)" aria-label="Edit">
+                                <md-icon md-svg-src="images/icons/edit.svg"></md-icon>
+                            </md-button>
+                            <md-button class="md-icon-button" md-colors="{ background: 'red-300' }" class="md-raised" ng-click="removeFunction(program)" aria-label="Remove">
+                                <md-icon md-svg-src="images/icons/remove.svg"></md-icon>
+                            </md-button>                
+                        </div>
+                    </div>
+                    <md-progress-linear class="list-progress" md-mode="determinate" value="{{program.percentComplete}}"></md-progress-linear>
+                </md-list-item> 
+            </md-list>
+
+            <!-- BODY -->
+            <md-expansion-panel-group>
+                <md-expansion-panel ng-repeat="week in program.weeks">
+                    <md-expansion-panel-collapsed>
+                        <div class="md-title">{{week.name}}</div>
+                        <div class="md-summary"></div>
+                        <md-expansion-panel-icon></md-expansion-panel-icon>
+                    </md-expansion-panel-collapsed>
+                    <md-expansion-panel-expanded>
+                        <md-expansion-panel-header ng-click="$panel.collapse()">
+                            <div class="md-title">{{week.name}}</div>
+                            <div class="md-summary"></div>
+                            <md-expansion-panel-icon></md-expansion-panel-icon>
+                        </md-expansion-panel-header>
+                        <md-expansion-panel-content>
+                            <md-list ng-class="{ 'no-padding-top': true, 'no-padding-bottom': true }" ng-repeat="day in week.days" flex>
+                                <p class="no-margin-top">{{day.name}}</p>
+                                <md-divider></md-divider>
+                                <md-list-item class="md-3-line" ng-repeat="set in day.sets" flex>
+                                    <div ng-if="set.exercise.exerciseType.id === 0" class="md-list-item-text" flex>
+                                        <h3 flex>{{set.exercise.name}}</h3>
+                                        <p>{{set.numberOfSets}} sets by {{set.numberOfReps}} reps at {{set.weight}}{{unit.textName}}</p>
+                                        <p>Increment Multiplier: {{set.incrementMultiplier}}</p>
+                                    </div>
+                                    <div ng-if="set.exercise.exerciseType.id === 1" class="md-list-item-text">
+                                        <h3 flex>{{set.exercise.name}}</h3>
+                                        <p>{{set.numberOfSets}} sets by {{set.numberOfReps}} reps</p>
+                                    </div>
+                                    <div ng-if="set.exercise.exerciseType.id === 2" class="md-list-item-text">
+                                        <h3 flex>{{set.exercise.name}}</h3>
+                                        <p>Duration: {{set.duration}}</p>
+                                    </div>
+                                    <md-checkbox class="md-secondary" ng-model="set.complete" ng-change="calculatePercentageComplete()" aria-label="Complete Set"></md-checkbox>
+                                </md-list-item>
+                            </md-list>
+                        </md-expansion-panel-content>
+                    </md-expansion-panel-expanded>
+                </md-expansion-panel>
+            </md-expansion-panel-group>
+
+
+        </span>
+    </div>
+</div>
