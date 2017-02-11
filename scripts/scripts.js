@@ -1683,8 +1683,8 @@ angular.module('powerHouseApp')
  * Service in the powerHouseApp.
  */
 angular.module('powerHouseApp')
-  .service('programService', ['utilService', 'storageService', 'keyHandlerService', 'toastService', 'recentlyActiveService', 'unitService', 'programConversionService', 
-    function (utilService, storageService, keyHandlerService, toastService, recentlyActiveService, unitService, programConversionService) {
+  .service('programService', ['utilService', 'storageService', 'keyHandlerService', 'toastService', 'recentlyActiveService', 'unitService', 'programConversionService', 'adTriggerService', 'adWeightService',
+    function (utilService, storageService, keyHandlerService, toastService, recentlyActiveService, unitService, programConversionService, adTriggerService, adWeightService) {
     var contract = {
       programs: [],
     };
@@ -1788,7 +1788,15 @@ angular.module('powerHouseApp')
       });
 
       updatedProgram.percentComplete = calculatePercentage(program.programType.totalNumberOfSets, completedSets);
+
+      var previouslyComplete = updatedProgram.complete;
       updatedProgram.complete = completeProgram(program.programType.totalNumberOfSets, completedSets);
+      var newlyComplete = updatedProgram.complete;
+
+      // Program is newly completed
+      if(previouslyComplete !== newlyComplete && updatedProgram.complete === true){
+        adTriggerService.incrementCount(adWeightService.weights.completeProgram);
+      }
 
       return contract.updateProgram(updatedProgram);
     };
@@ -2025,14 +2033,16 @@ angular.module('powerHouseApp')
  * Service in the powerHouseApp.
  */
 angular.module('powerHouseApp')
-  .service('addProgramService', ['utilService', 'programService', 'exerciseTypeService', 'unitService', function (utilService, programService, exerciseTypeService, unitService) {
+  .service('addProgramService', ['utilService', 'programService', 'exerciseTypeService', 'unitService', 'adTriggerService', 'adWeightService', function (utilService, programService, exerciseTypeService, unitService, adTriggerService, adWeightService) {
     var contract = {};
 
     contract.addProgram = function(programName, programType, increment, exercises){
+      adTriggerService.incrementCount(adWeightService.weights.addProgram);
       programService.addProgram(programName, programType, increment, formatExercises(programType.exercises, exercises));
     };
 
     contract.editProgram = function(program, id, programName, programType, increment, exercises){
+      adTriggerService.incrementCount(adWeightService.weights.editProgram);
       programService.editProgram(program, id, programName, programType, increment, formatExercises(programType.exercises, exercises));
     };
 
@@ -6484,6 +6494,70 @@ angular.module('powerHouseApp')
     return contract;
   }]);
 
+'use strict';
+
+/**
+ * @ngdoc service
+ * @name powerHouseApp.adWeightService
+ * @description
+ * # adWeightService
+ * Service in the powerHouseApp.
+ */
+angular.module('powerHouseApp')
+  .service('adWeightService', function () {
+    var contract = {};
+
+    contract.weights = {
+      'addProgram': 20,
+      'addProgramType': 20,
+      'editProgram': 20,
+      'editProgramType': 20,
+      'completeProgram': 20
+    };
+
+    return contract;
+  });
+
+'use strict';
+
+/**
+ * @ngdoc service
+ * @name powerHouseApp.adTriggerService
+ * @description
+ * # adTriggerService
+ * Service in the powerHouseApp.
+ */
+angular.module('powerHouseApp')
+  .service('adTriggerService', function () {
+    var contract = {
+      threshold: 20,
+      count: 0
+    };
+
+    contract.incrementCount = function(weight){
+      contract.count += weight;
+      if(thresholdMet(contract.threshold, contract.count)){
+        contract.count = 0;
+        prepareAd();
+        showAd();
+      }
+    };
+
+    var thresholdMet = function(threshold, count){
+      return count >= threshold;
+    };
+
+    var prepareAd = function(){
+      
+    };
+
+    var showAd = function(){
+      
+    };
+
+    return contract;
+  });
+
 angular.module('powerHouseApp').run(['$templateCache', function($templateCache) {
   'use strict';
 
@@ -6504,7 +6578,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
     "\n" +
     "       ga('create', 'UA-XXXXX-X');\r" +
     "\n" +
-    "       ga('send', 'pageview');</script> <!-- build:js(.) scripts/vendor.js --> <!-- bower:js --> <script src=\"bower_components/angular/angular.js\"></script> <script src=\"bower_components/angular-animate/angular-animate.js\"></script> <script src=\"bower_components/angular-aria/angular-aria.js\"></script> <script src=\"bower_components/angular-cookies/angular-cookies.js\"></script> <script src=\"bower_components/angular-messages/angular-messages.js\"></script> <script src=\"bower_components/angular-resource/angular-resource.js\"></script> <script src=\"bower_components/angular-route/angular-route.js\"></script> <script src=\"bower_components/angular-sanitize/angular-sanitize.js\"></script> <script src=\"bower_components/angular-touch/angular-touch.js\"></script> <script src=\"bower_components/angular-material/angular-material.js\"></script> <script src=\"bower_components/angular-local-storage/dist/angular-local-storage.js\"></script> <script src=\"bower_components/angular-material-expansion-panel/dist/md-expansion-panel.js\"></script> <!-- endbower --> <!-- endbuild --> <!-- build:js({.tmp,app}) scripts/scripts.js --> <script src=\"scripts/app.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBar.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramType.js\"></script> <script src=\"scripts/controllers/dashboard.js\"></script> <script src=\"scripts/controllers/programList.js\"></script> <script src=\"scripts/controllers/addProgram.js\"></script> <script src=\"scripts/controllers/addProgramType.js\"></script> <script src=\"scripts/controllers/programTypeList.js\"></script> <script src=\"scripts/services/programTypeService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeName.js\"></script> <script src=\"scripts/services/exerciseTypeService.js\"></script> <script src=\"scripts/services/utilService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeExercise.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeNameService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeExerciseService.js\"></script> <script src=\"scripts/directives/addRemove/addRemove.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeWeek.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeWeekService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeDay.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeDayService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeSet.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeSetService.js\"></script> <script src=\"scripts/services/addProgramTypeService.js\"></script> <script src=\"scripts/services/storageService.js\"></script> <script src=\"scripts/services/keyHandlerService.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeList.js\"></script> <script src=\"scripts/directives/list/list.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeListService.js\"></script> <script src=\"scripts/controllers/programTypeInformation.js\"></script> <script src=\"scripts/controllers/programInformation.js\"></script> <script src=\"scripts/services/programTypeInformationService.js\"></script> <script src=\"scripts/directives/addProgram/addProgram.js\"></script> <script src=\"scripts/directives/programList/programList.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeader.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeaderService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExerciseService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExercise.js\"></script> <script src=\"scripts/services/programService.js\"></script> <script src=\"scripts/directives/programList/programListService.js\"></script> <script src=\"scripts/services/programInformationService.js\"></script> <script src=\"scripts/controllers/editProgram.js\"></script> <script src=\"scripts/services/addProgramService.js\"></script> <script src=\"scripts/controllers/editProgramType.js\"></script> <script src=\"scripts/directives/messageCard/messageCard.js\"></script> <script src=\"scripts/services/toastService.js\"></script> <script src=\"scripts/services/defaultProgramTypeService.js\"></script> <script src=\"scripts/services/unitService.js\"></script> <script src=\"scripts/services/dashboardService.js\"></script> <script src=\"scripts/directives/highlightCard/highlightCard.js\"></script> <script src=\"scripts/directives/quickComplete/quickComplete.js\"></script> <script src=\"scripts/directives/quickComplete/quickCompleteService.js\"></script> <script src=\"scripts/services/recentlyActiveService.js\"></script> <script src=\"scripts/directives/help/helpService.js\"></script> <script src=\"scripts/directives/help/help.js\"></script> <script src=\"scripts/controllers/dialogController.js\"></script> <script src=\"scripts/directives/bottomNavigationBar/bottomNavigationBar.js\"></script> <script src=\"scripts/controllers/settings.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSetting.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSettingService.js\"></script> <script src=\"scripts/services/programconversionservice.js\"></script> <!-- endbuild --> </body> </html>"
+    "       ga('send', 'pageview');</script> <!-- build:js(.) scripts/vendor.js --> <!-- bower:js --> <script src=\"bower_components/angular/angular.js\"></script> <script src=\"bower_components/angular-animate/angular-animate.js\"></script> <script src=\"bower_components/angular-aria/angular-aria.js\"></script> <script src=\"bower_components/angular-cookies/angular-cookies.js\"></script> <script src=\"bower_components/angular-messages/angular-messages.js\"></script> <script src=\"bower_components/angular-resource/angular-resource.js\"></script> <script src=\"bower_components/angular-route/angular-route.js\"></script> <script src=\"bower_components/angular-sanitize/angular-sanitize.js\"></script> <script src=\"bower_components/angular-touch/angular-touch.js\"></script> <script src=\"bower_components/angular-material/angular-material.js\"></script> <script src=\"bower_components/angular-local-storage/dist/angular-local-storage.js\"></script> <script src=\"bower_components/angular-material-expansion-panel/dist/md-expansion-panel.js\"></script> <!-- endbower --> <!-- endbuild --> <!-- build:js({.tmp,app}) scripts/scripts.js --> <script src=\"scripts/app.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBar.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramType.js\"></script> <script src=\"scripts/controllers/dashboard.js\"></script> <script src=\"scripts/controllers/programList.js\"></script> <script src=\"scripts/controllers/addProgram.js\"></script> <script src=\"scripts/controllers/addProgramType.js\"></script> <script src=\"scripts/controllers/programTypeList.js\"></script> <script src=\"scripts/services/programTypeService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeName.js\"></script> <script src=\"scripts/services/exerciseTypeService.js\"></script> <script src=\"scripts/services/utilService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeExercise.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeNameService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeExerciseService.js\"></script> <script src=\"scripts/directives/addRemove/addRemove.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeWeek.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeWeekService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeDay.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeDayService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeSet.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeSetService.js\"></script> <script src=\"scripts/services/addProgramTypeService.js\"></script> <script src=\"scripts/services/storageService.js\"></script> <script src=\"scripts/services/keyHandlerService.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeList.js\"></script> <script src=\"scripts/directives/list/list.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeListService.js\"></script> <script src=\"scripts/controllers/programTypeInformation.js\"></script> <script src=\"scripts/controllers/programInformation.js\"></script> <script src=\"scripts/services/programTypeInformationService.js\"></script> <script src=\"scripts/directives/addProgram/addProgram.js\"></script> <script src=\"scripts/directives/programList/programList.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeader.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeaderService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExerciseService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExercise.js\"></script> <script src=\"scripts/services/programService.js\"></script> <script src=\"scripts/directives/programList/programListService.js\"></script> <script src=\"scripts/services/programInformationService.js\"></script> <script src=\"scripts/controllers/editProgram.js\"></script> <script src=\"scripts/services/addProgramService.js\"></script> <script src=\"scripts/controllers/editProgramType.js\"></script> <script src=\"scripts/directives/messageCard/messageCard.js\"></script> <script src=\"scripts/services/toastService.js\"></script> <script src=\"scripts/services/defaultProgramTypeService.js\"></script> <script src=\"scripts/services/unitService.js\"></script> <script src=\"scripts/services/dashboardService.js\"></script> <script src=\"scripts/directives/highlightCard/highlightCard.js\"></script> <script src=\"scripts/directives/quickComplete/quickComplete.js\"></script> <script src=\"scripts/directives/quickComplete/quickCompleteService.js\"></script> <script src=\"scripts/services/recentlyActiveService.js\"></script> <script src=\"scripts/directives/help/helpService.js\"></script> <script src=\"scripts/directives/help/help.js\"></script> <script src=\"scripts/controllers/dialogController.js\"></script> <script src=\"scripts/directives/bottomNavigationBar/bottomNavigationBar.js\"></script> <script src=\"scripts/controllers/settings.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSetting.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSettingService.js\"></script> <script src=\"scripts/services/programconversionservice.js\"></script> <script src=\"scripts/services/adWeightService.js\"></script> <script src=\"scripts/services/adTriggerService.js\"></script> <!-- endbuild --> </body> </html>"
   );
 
 
