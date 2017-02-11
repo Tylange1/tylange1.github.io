@@ -341,6 +341,7 @@ angular.module('powerHouseApp')
     contract.addProgramType = function(programTypeName, exercises, weeks){
       var programType = generateProgramType(programTypeName, exercises, weeks);
       contract.programTypes.push(programType);
+      // console.log(angular.toJson(programType));
       // contract.programTypes.push(generateProgramType(programTypeName, exercises, weeks));
       storeProgramTypes();
     };
@@ -1698,6 +1699,13 @@ angular.module('powerHouseApp')
 
     contract.convertPrograms = function(){
       contract.programs = programConversionService.convertPrograms(contract.programs);
+      if(recentlyActiveService.currentlyActive() === false){
+        recentlyActiveService.updateRecentlyActive(recentlyActiveService.nextActive(contract.getActivePrograms()));
+      }
+      else {
+        // Find the corresponding program and set it as the new recently getActivePrograms
+        recentlyActiveService.updateRecentlyActive(contract.programs[findProgramIndex(recentlyActiveService.getRecentlyActive())]); 
+      }
       storePrograms();
     };
 
@@ -1846,7 +1854,7 @@ angular.module('powerHouseApp')
         weeks: generateWeeks(programType, increment, exercises),
         percentComplete: 0,
         programType: programType,
-        increment: increment,
+        increment: utilService.getNumber(increment).toFixed(1),
         exercises: exercises,
         default: false,
         complete: false
@@ -3044,6 +3052,2871 @@ angular.module('powerHouseApp')
             }
         ],
         'default':true
+      },
+      {
+        'id': 2,
+        'totalNumberOfSets': 195,
+        'programTypeName': 'Smolov',
+        'exercises': [
+          {
+            'id': 0,
+            'name': 'Squat',
+            'exerciseType': {
+              'id': 0,
+              'name': 'Weighted'
+            },
+            'description': '',
+            'confirmed': true
+          }
+        ],
+        'weeks': [
+          {
+            'id': 0,
+            'name': 'Phase In (1)',
+            'days': [
+              {
+                'id': 0,
+                'name': 'Day One',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 3,
+                    'numberOfReps': 8,
+                    'oneRepMaxPercent': 65,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 70,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 2,
+                    'numberOfReps': 2,
+                    'oneRepMaxPercent': 75,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 3,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 1,
+                    'oneRepMaxPercent': 80,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 1,
+                'name': 'Day Two',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 3,
+                    'numberOfReps': 8,
+                    'oneRepMaxPercent': 65,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 70,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 2,
+                    'numberOfReps': 2,
+                    'oneRepMaxPercent': 75,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 3,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 1,
+                    'oneRepMaxPercent': 80,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 2,
+                'name': 'Day Three',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 4,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 70,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 70,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 2,
+                    'numberOfReps': 2,
+                    'oneRepMaxPercent': 80,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 3,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 1,
+                    'oneRepMaxPercent': 90,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              }
+            ],
+            'confirmed': true
+          },
+          {
+            'id': 1,
+            'name': 'Phase In (2)',
+            'days': [
+              {
+                'id': 0,
+                'name': 'Day One',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 80,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 1,
+                'name': 'Day Two',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 82.5,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 2,
+                'name': 'Day Three',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 85,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              }
+            ],
+            'confirmed': true
+          },
+          {
+            'id': 2,
+            'name': 'Base Cycle (3)',
+            'days': [
+              {
+                'id': 0,
+                'name': 'Day One',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 4,
+                    'numberOfReps': 9,
+                    'oneRepMaxPercent': 70,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 1,
+                'name': 'Day Two',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 5,
+                    'numberOfReps': 7,
+                    'oneRepMaxPercent': 75,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 2,
+                'name': 'Day Three',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 7,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 80,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 3,
+                'name': 'Day Four',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 10,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 85,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              }
+            ],
+            'confirmed': true
+          },
+          {
+            'id': 3,
+            'name': 'Base Cycle (4)',
+            'days': [
+              {
+                'id': 0,
+                'name': 'Day One',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 4,
+                    'numberOfReps': 9,
+                    'oneRepMaxPercent': 70,
+                    'incrementMultiplier': 1
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 1,
+                'name': 'Day Two',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 5,
+                    'numberOfReps': 7,
+                    'oneRepMaxPercent': 75,
+                    'incrementMultiplier': 1
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 2,
+                'name': 'Day Three',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 7,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 80,
+                    'incrementMultiplier': 1
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 3,
+                'name': 'Day Four',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 10,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 85,
+                    'incrementMultiplier': 1
+                  }
+                ],
+                'confirmed': true
+              }
+            ],
+            'confirmed': true
+          },
+          {
+            'id': 4,
+            'name': 'Base Cycle (5)',
+            'days': [
+              {
+                'id': 0,
+                'name': 'Day One',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 4,
+                    'numberOfReps': 9,
+                    'oneRepMaxPercent': 70,
+                    'incrementMultiplier': 2
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 1,
+                'name': 'Day Two',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 5,
+                    'numberOfReps': 7,
+                    'oneRepMaxPercent': 75,
+                    'incrementMultiplier': 2
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 2,
+                'name': 'Day Three',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 7,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 80,
+                    'incrementMultiplier': 2
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 3,
+                'name': 'Day Four',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 10,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 85,
+                    'incrementMultiplier': 2
+                  }
+                ],
+                'confirmed': true
+              }
+            ],
+            'confirmed': true
+          },
+          {
+            'id': 5,
+            'name': 'Base Cycle (6)',
+            'days': [
+              {
+                'id': 0,
+                'name': 'Day One',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 1,
+                    'oneRepMaxPercent': 100,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 1,
+                'name': 'Day Two',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 1,
+                    'oneRepMaxPercent': 100,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              }
+            ],
+            'confirmed': true
+          },
+          {
+            'id': 6,
+            'name': 'Intense Cycle (9)',
+            'days': [
+              {
+                'id': 0,
+                'name': 'Day One',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 65,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 4,
+                    'oneRepMaxPercent': 75,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 3,
+                    'numberOfReps': 4,
+                    'oneRepMaxPercent': 85,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 3,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 90,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 1,
+                'name': 'Day Two',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 60,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 70,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 4,
+                    'oneRepMaxPercent': 80,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 3,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 90,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 4,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 2,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 85,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 2,
+                'name': 'Day Three',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 4,
+                    'oneRepMaxPercent': 65,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 4,
+                    'oneRepMaxPercent': 70,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 5,
+                    'numberOfReps': 4,
+                    'oneRepMaxPercent': 80,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              }
+            ],
+            'confirmed': true
+          },
+          {
+            'id': 7,
+            'name': 'Intense Cycle (10)',
+            'days': [
+              {
+                'id': 0,
+                'name': 'Day One',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 4,
+                    'oneRepMaxPercent': 60,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 4,
+                    'oneRepMaxPercent': 70,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 4,
+                    'oneRepMaxPercent': 80,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 3,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 90,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 4,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 2,
+                    'numberOfReps': 4,
+                    'oneRepMaxPercent': 90,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 1,
+                'name': 'Day Two',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 65,
+                    'incrementMultiplier': 0,
+                    'numberOfSets': 1
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 75,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 85,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 3,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 3,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 90,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 4,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 95,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 2,
+                'name': 'Day Three',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 65,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 75,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 4,
+                    'oneRepMaxPercent': 85,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 3,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 4,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 90,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              }
+            ],
+            'confirmed': true
+          },
+          {
+            'id': 8,
+            'name': 'Intense Cycle (11)',
+            'days': [
+              {
+                'id': 0,
+                'name': 'Day One',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 60,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 70,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 80,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 3,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 5,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 90,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 1,
+                'name': 'Day Two',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 60,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 70,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 80,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 3,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 2,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 95,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 2,
+                'name': 'Day Three',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 65,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 75,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 85,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 3,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 4,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 95,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              }
+            ],
+            'confirmed': true
+          },
+          {
+            'id': 9,
+            'name': 'Intense Cycle (12)',
+            'days': [
+              {
+                'id': 0,
+                'name': 'Day One',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 70,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 4,
+                    'oneRepMaxPercent': 80,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 5,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 90,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 1,
+                'name': 'Day Two',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 70,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 80,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 4,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 95,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 2,
+                'name': 'Day Three',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 75,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 4,
+                    'oneRepMaxPercent': 90,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 3,
+                    'numberOfReps': 4,
+                    'oneRepMaxPercent': 80,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              }
+            ],
+            'confirmed': true
+          },
+          {
+            'id': 10,
+            'name': 'Taper Week (13)',
+            'days': [
+              {
+                'id': 0,
+                'name': 'Day One',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 70,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 80,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 2,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 90,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 3,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 3,
+                    'numberOfReps': 4,
+                    'oneRepMaxPercent': 95,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 1,
+                'name': 'Day Two',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 4,
+                    'oneRepMaxPercent': 75,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 4,
+                    'numberOfReps': 4,
+                    'oneRepMaxPercent': 85,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 1,
+                    'oneRepMaxPercent': 100,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              }
+            ],
+            'confirmed': true
+          }
+        ],
+        'default': true
+      },
+      {
+        'id': 3,
+        'totalNumberOfSets': 47,
+        'programTypeName': 'Wendler\'s 5\/3\/1',
+        'exercises': [
+          {
+            'id': 0,
+            'name': 'Squat',
+            'exerciseType': {
+              'id': 0,
+              'name': 'Weighted'
+            },
+            'description': '',
+            'confirmed': true
+          },
+          {
+            'id': 1,
+            'name': 'Bench Press',
+            'exerciseType': {
+              'id': 0,
+              'name': 'Weighted'
+            },
+            'description': '',
+            'confirmed': true
+          },
+          {
+            'id': 2,
+            'name': 'Deadlift',
+            'exerciseType': {
+              'id': 0,
+              'name': 'Weighted'
+            },
+            'description': '',
+            'confirmed': true
+          },
+          {
+            'id': 3,
+            'name': 'Overhead Press',
+            'exerciseType': {
+              'id': 0,
+              'name': 'Weighted'
+            },
+            'description': '',
+            'confirmed': true
+          }
+        ],
+        'weeks': [
+          {
+            'id': 0,
+            'name': 'Week One',
+            'days': [
+              {
+                'id': 0,
+                'name': 'Day One',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 3,
+                      'name': 'Overhead Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 65,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 3,
+                      'name': 'Overhead Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 75,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 3,
+                      'name': 'Overhead Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 85,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 1,
+                'name': 'Day Two',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 2,
+                      'name': 'Deadlift',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 65,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 2,
+                      'name': 'Deadlift',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 75,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 2,
+                      'name': 'Deadlift',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 85,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 2,
+                'name': 'Day Three',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 1,
+                      'name': 'Bench Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 65,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 1,
+                      'name': 'Bench Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 75,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 1,
+                      'name': 'Bench Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 85,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 3,
+                'name': 'Day Four',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 65,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 75,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 85,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              }
+            ],
+            'confirmed': true
+          },
+          {
+            'id': 1,
+            'name': 'Week Two',
+            'days': [
+              {
+                'id': 0,
+                'name': 'Day One',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 3,
+                      'name': 'Overhead Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 70,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 3,
+                      'name': 'Overhead Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 80,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 3,
+                      'name': 'Overhead Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 90,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 1,
+                'name': 'Day Two',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 2,
+                      'name': 'Deadlift',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 70,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 2,
+                      'name': 'Deadlift',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 80,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 2,
+                      'name': 'Deadlift',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 90,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 2,
+                'name': 'Day Three',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 1,
+                      'name': 'Bench Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 70,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 1,
+                      'name': 'Bench Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 80,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 1,
+                      'name': 'Bench Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 90,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 3,
+                'name': 'Day Four',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 70,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 90,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              }
+            ],
+            'confirmed': true
+          },
+          {
+            'id': 2,
+            'name': 'Week Three',
+            'days': [
+              {
+                'id': 0,
+                'name': 'Day One',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 3,
+                      'name': 'Overhead Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 75,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 3,
+                      'name': 'Overhead Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 85,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 3,
+                      'name': 'Overhead Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 1,
+                    'oneRepMaxPercent': 95,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 1,
+                'name': 'Day Two',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 2,
+                      'name': 'Deadlift',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 75,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 2,
+                      'name': 'Deadlift',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 85,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 2,
+                      'name': 'Deadlift',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 1,
+                    'oneRepMaxPercent': 95,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 2,
+                'name': 'Day Three',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 1,
+                      'name': 'Bench Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 75,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 1,
+                      'name': 'Bench Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 85,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 1,
+                      'name': 'Bench Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 1,
+                    'oneRepMaxPercent': 95,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 3,
+                'name': 'Day Four',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 75,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 3,
+                    'oneRepMaxPercent': 85,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 1,
+                    'oneRepMaxPercent': 95,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              }
+            ],
+            'confirmed': true
+          },
+          {
+            'id': 3,
+            'name': 'Week Four',
+            'days': [
+              {
+                'id': 0,
+                'name': 'Day One',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 3,
+                      'name': 'Overhead Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 40,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 3,
+                      'name': 'Overhead Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 50,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 3,
+                      'name': 'Overhead Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 60,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 1,
+                'name': 'Day Two',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 2,
+                      'name': 'Deadlift',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 40,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 2,
+                      'name': 'Deadlift',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 50,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 2,
+                      'name': 'Deadlift',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 60,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 2,
+                'name': 'Day Three',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 1,
+                      'name': 'Bench Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 40,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 1,
+                      'name': 'Bench Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 50,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 1,
+                      'name': 'Bench Press',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 60,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              },
+              {
+                'id': 3,
+                'name': 'Day Four',
+                'sets': [
+                  {
+                    'id': 0,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 40,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 1,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 50,
+                    'incrementMultiplier': 0
+                  },
+                  {
+                    'id': 2,
+                    'exercise': {
+                      'id': 0,
+                      'name': 'Squat',
+                      'exerciseType': {
+                        'id': 0,
+                        'name': 'Weighted'
+                      },
+                      'description': '',
+                      'confirmed': true
+                    },
+                    'confirmed': true,
+                    'numberOfSets': 1,
+                    'numberOfReps': 5,
+                    'oneRepMaxPercent': 60,
+                    'incrementMultiplier': 0
+                  }
+                ],
+                'confirmed': true
+              }
+            ],
+            'confirmed': true
+          }
+        ],
+        'default': true
       }
     ];
 
@@ -3563,7 +6436,9 @@ angular.module('powerHouseApp')
 
     contract.convertPrograms = function(programs){
       return programs.map(function(program){
-        return convertProgram(program);
+        if(utilService.isDefined(program.unit)){
+          return convertProgram(program);
+        }
       });
     };
 
@@ -3572,7 +6447,7 @@ angular.module('powerHouseApp')
 
       var convertedProgram = angular.copy(program);
 
-      if(convertedProgram.unit !== unit.name){
+      if(utilService.isDefined(convertedProgram.unit) && convertedProgram.unit !== unit.name){
         convertedProgram.increment = convertIncrement(convertedProgram.unit, convertedProgram.increment);
         convertedProgram.exercises = convertExercises(convertedProgram.unit, convertedProgram.exercises);
         convertedProgram.weeks = convertWeeks(convertedProgram.unit, convertedProgram.weeks);
@@ -3719,7 +6594,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('scripts/directives/bottomNavigationBar/bottomNavigationBarView.html',
-    "<div layout=\"row\"> <md-toolbar md-colors=\"{ background: 'primary-50'}\"> <div class=\"md-toolbar-tools\"> <div layout=\"column\" class=\"icon-width navbar-height\" layout-align=\"center center\"> <md-button class=\"md-icon-button\" href=\"#/add-program\" aria-label=\"add gym program\"> <md-icon class=\"black-icon\" md-svg-icon=\"images/icons/checkBlack.svg\"></md-icon> </md-button> <span class=\"icon-text truncate-text\">Add Program</span> </div> <div layout=\"column\" class=\"icon-width navbar-height\" layout-align=\"center center\"> <md-button class=\"md-icon-button\" ng-href=\"#/program-list\" aria-label=\"complete gym programs\"> <md-icon class=\"black-icon\" md-svg-icon=\"images/icons/listCheckBlack.svg\"></md-icon> </md-button> <span class=\"icon-text truncate-text\">Program List</span> </div> <span flex></span> <span flex></span> <div layout=\"column\" class=\"icon-width navbar-height\" layout-align=\"center center\"> <md-button class=\"md-icon-button\" ng-href=\"#/add-program-type\" aria-label=\"add gym program type\"> <md-icon class=\"black-icon\" md-svg-icon=\"images/icons/addBlack.svg\"></md-icon> </md-button> <span class=\"icon-text truncate-text\">Add Type</span> </div> <div layout=\"column\" class=\"icon-width navbar-height\" layout-align=\"center center\"> <md-button class=\"md-icon-button\" ng-href=\"#/program-type-list\" aria-label=\"complete gym program types\"> <md-icon class=\"black-icon\" md-svg-icon=\"images/icons/listAddBlack.svg\"></md-icon> </md-button> <span class=\"icon-text truncate-text\">Type List</span> </div> </div> </md-toolbar> </div>"
+    "<div layout=\"row\"> <md-toolbar md-colors=\"{ background: 'primary-50'}\"> <div class=\"md-toolbar-tools\"> <a class=\"icon-width\" ng-href=\"#/add-program\" aria-label=\"Add Program\"> <div class=\"navbar-height\" layout=\"column\" layout-align=\"center center\"> <div> <md-icon md-svg-icon=\"images/icons/checkBlack.svg\"></md-icon> </div> <div> <span class=\"icon-text truncate-text\">Add Program</span> </div> </div> </a> <a class=\"icon-width\" ng-href=\"#/program-list\" aria-label=\"Program List\"> <div class=\"navbar-height\" layout=\"column\" layout-align=\"center center\"> <div> <md-icon md-svg-icon=\"images/icons/listCheckBlack.svg\"></md-icon> </div> <div> <span class=\"icon-text truncate-text\">Program List</span> </div> </div> </a> <span flex></span> <span flex></span> <a class=\"icon-width\" ng-href=\"#/add-program-type\" aria-label=\"Add Program Type\"> <div class=\"navbar-height\" layout=\"column\" layout-align=\"center center\"> <div> <md-icon md-svg-icon=\"images/icons/addBlack.svg\"></md-icon> </div> <div> <span class=\"icon-text truncate-text\">Add Type</span> </div> </div> </a> <a class=\"icon-width\" ng-href=\"#/program-type-list\" aria-label=\"Program Type List\"> <div class=\"navbar-height\" layout=\"column\" layout-align=\"center center\"> <div> <md-icon md-svg-icon=\"images/icons/listAddBlack.svg\"></md-icon> </div> <div> <span class=\"icon-text truncate-text\">Type List</span> </div> </div> </a> </div> </md-toolbar> </div>"
   );
 
 
@@ -3744,7 +6619,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('scripts/directives/navigationBar/navigationBarView.html',
-    "<div layout=\"row\"> <md-toolbar class=\"md-hue-2\"> <div class=\"md-toolbar-tools\"> <div layout=\"column\" class=\"icon-width navbar-height\" layout-align=\"center center\"> <md-button class=\"md-icon-button\" ng-href=\"#/\" aria-label=\"dashboard\"> <md-icon md-svg-icon=\"images/icons/dashboard.svg\"></md-icon> </md-button> <span class=\"icon-text truncate-text\">dashboard</span> </div> <span flex></span> <h2 class=\"title-text\">POWER HOUSE</h2> <span flex></span> <div layout=\"column\" class=\"icon-width navbar-height\" layout-align=\"center center\"> <md-button class=\"md-icon-button\" ng-href=\"#/settings\" aria-label=\"settings\"> <md-icon md-svg-icon=\"images/icons/settings.svg\"></md-icon> </md-button> <span class=\"icon-text truncate-text\">settings</span> </div> </div> </md-toolbar> </div>"
+    "<div layout=\"row\"> <md-toolbar class=\"md-hue-2\"> <div class=\"md-toolbar-tools\"> <a class=\"icon-width\" ng-href=\"#/\" aria-label=\"dashboard\"> <div class=\"navbar-height\" layout=\"column\" layout-align=\"center center\"> <div> <md-icon md-svg-icon=\"images/icons/dashboard.svg\"></md-icon> </div> <div> <span class=\"icon-text truncate-text\">Dashboard</span> </div> </div> </a> <span flex></span> <h2 class=\"title-text\">POWER HOUSE</h2> <span flex></span> <a class=\"icon-width\" ng-href=\"#/settings\" aria-label=\"settings\"> <div class=\"navbar-height\" layout=\"column\" layout-align=\"center center\"> <div> <md-icon md-svg-icon=\"images/icons/settings.svg\"></md-icon> </div> <div> <span class=\"icon-text truncate-text\">Settings</span> </div> </div> </a> </div> </md-toolbar> </div>"
   );
 
 
