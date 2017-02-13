@@ -101,9 +101,6 @@ angular
       $mdThemingProvider.theme('default')
         .primaryPalette('blue-grey')
         .accentPalette('deep-orange');
-
-      $mdInkRippleProvider
-        .disableInkRipple();
   }]);
 'use strict';
 
@@ -246,13 +243,24 @@ angular.module('powerHouseApp')
  * Controller of the powerHouseApp
  */
 angular.module('powerHouseApp')
-  .controller('programListCtrl', ['$scope', 'programService', function ($scope, programService) {
-    $scope.programs = programService.getPrograms();
+  .controller('programListCtrl', ['$scope', '$filter', 'programService', function ($scope, $filter, programService) {
+    $scope.originalPrograms = programService.getPrograms();
+    $scope.programs = $scope.originalPrograms;
 
     // Empty list
     $scope.emptyListMessage = 'Start by adding a program';
     $scope.emptyListButtonText = 'Add Program';
     $scope.emptyListButtonLink = '#/add-program';
+
+    $scope.filterValue = '';
+
+    $scope.$watch(function(){
+      return $scope.filterValue;
+    }, function(newValue, oldValue){
+      if(newValue !== oldValue){
+        $scope.programs = $filter('filter')($scope.originalPrograms, { name: newValue });
+      }
+    });
 
     $scope.$watchCollection(function(){
       return programService.getPrograms();
@@ -373,9 +381,24 @@ angular.module('powerHouseApp')
  * Controller of the powerHouseApp
  */
 angular.module('powerHouseApp')
-  .controller('ProgramTypeListCtrl', ['$scope', 'programTypeService', function ($scope, programTypeService) {
+  .controller('ProgramTypeListCtrl', ['$scope', '$filter', 'programTypeService', function ($scope, $filter, programTypeService) {
+    $scope.originalProgramTypes = programTypeService.getProgramTypes();
+    $scope.programTypes = $scope.originalProgramTypes;
 
-    $scope.programTypes = programTypeService.getProgramTypes();
+    // Empty list
+    $scope.emptyListMessage = 'Start by adding a program type';
+    $scope.emptyListButtonText = 'Add Program Type';
+    $scope.emptyListButtonLink = '#/add-program-type';
+
+    $scope.filterValue = '';
+
+    $scope.$watch(function(){
+      return $scope.filterValue;
+    }, function(newValue, oldValue){
+      if(newValue !== oldValue){
+        $scope.programTypes = $filter('filter')($scope.originalProgramTypes, { programTypeName: newValue });
+      }
+    });
 
     $scope.$watch(function(){
       return programTypeService.getProgramTypes();
@@ -2043,6 +2066,23 @@ angular.module('powerHouseApp')
       return programs.map(function(program){
         return formatProgram(program);
       });
+    };
+
+    contract.getFilters = function(){
+      return [
+        {
+          prop: 'name',
+          name: 'Name'
+        },
+        {
+          prop: 'name',
+          name: 'Name'
+        },
+        {
+          prop: 'name',
+          name: 'Name'
+        },
+      ];
     };
 
     var formatProgram = function(program){
@@ -6937,6 +6977,31 @@ angular.module('powerHouseApp')
     return contract;
   });
 
+'use strict';
+
+/**
+ * @ngdoc directive
+ * @name powerHouseApp.directive:listFilter
+ * @description
+ * # listFilter
+ */
+angular.module('powerHouseApp')
+  .directive('listFilter', function () {
+    return {
+      templateUrl: 'scripts/directives/listFilter/listFilterView.html',
+      restrict: 'E',
+      scope: {
+        filterValue: '=',
+      },
+      link: function postLink(scope) {
+
+        scope.clear = function(){
+          scope.filterValue = '';
+        }
+      }
+    };
+  });
+
 angular.module('powerHouseApp').run(['$templateCache', function($templateCache) {
   'use strict';
 
@@ -6957,7 +7022,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
     "\n" +
     "       ga('create', 'UA-XXXXX-X');\r" +
     "\n" +
-    "       ga('send', 'pageview');</script> <!-- build:js(.) scripts/vendor.js --> <!-- bower:js --> <script src=\"bower_components/angular/angular.js\"></script> <script src=\"bower_components/angular-animate/angular-animate.js\"></script> <script src=\"bower_components/angular-aria/angular-aria.js\"></script> <script src=\"bower_components/angular-cookies/angular-cookies.js\"></script> <script src=\"bower_components/angular-messages/angular-messages.js\"></script> <script src=\"bower_components/angular-resource/angular-resource.js\"></script> <script src=\"bower_components/angular-route/angular-route.js\"></script> <script src=\"bower_components/angular-sanitize/angular-sanitize.js\"></script> <script src=\"bower_components/angular-touch/angular-touch.js\"></script> <script src=\"bower_components/angular-material/angular-material.js\"></script> <script src=\"bower_components/angular-local-storage/dist/angular-local-storage.js\"></script> <script src=\"bower_components/angular-material-expansion-panel/dist/md-expansion-panel.js\"></script> <!-- endbower --> <!-- endbuild --> <!-- build:js({.tmp,app}) scripts/scripts.js --> <script src=\"scripts/app.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBar.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramType.js\"></script> <script src=\"scripts/controllers/dashboard.js\"></script> <script src=\"scripts/controllers/programList.js\"></script> <script src=\"scripts/controllers/addProgram.js\"></script> <script src=\"scripts/controllers/addProgramType.js\"></script> <script src=\"scripts/controllers/programTypeList.js\"></script> <script src=\"scripts/services/programTypeService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeHeader.js\"></script> <script src=\"scripts/services/exerciseTypeService.js\"></script> <script src=\"scripts/services/utilService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeExercise.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeHeaderService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeExerciseService.js\"></script> <script src=\"scripts/directives/addRemove/addRemove.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeWeek.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeWeekService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeDay.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeDayService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeSet.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeSetService.js\"></script> <script src=\"scripts/services/addProgramTypeService.js\"></script> <script src=\"scripts/services/storageService.js\"></script> <script src=\"scripts/services/keyHandlerService.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeList.js\"></script> <script src=\"scripts/directives/list/list.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeListService.js\"></script> <script src=\"scripts/controllers/programTypeInformation.js\"></script> <script src=\"scripts/controllers/programInformation.js\"></script> <script src=\"scripts/services/programTypeInformationService.js\"></script> <script src=\"scripts/directives/addProgram/addProgram.js\"></script> <script src=\"scripts/directives/programList/programList.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeader.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeaderService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExerciseService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExercise.js\"></script> <script src=\"scripts/services/programService.js\"></script> <script src=\"scripts/directives/programList/programListService.js\"></script> <script src=\"scripts/services/programInformationService.js\"></script> <script src=\"scripts/controllers/editProgram.js\"></script> <script src=\"scripts/services/addProgramService.js\"></script> <script src=\"scripts/controllers/editProgramType.js\"></script> <script src=\"scripts/directives/messageCard/messageCard.js\"></script> <script src=\"scripts/services/toastService.js\"></script> <script src=\"scripts/services/defaultProgramTypeService.js\"></script> <script src=\"scripts/services/unitService.js\"></script> <script src=\"scripts/services/dashboardService.js\"></script> <script src=\"scripts/directives/highlightCard/highlightCard.js\"></script> <script src=\"scripts/directives/quickComplete/quickComplete.js\"></script> <script src=\"scripts/directives/quickComplete/quickCompleteService.js\"></script> <script src=\"scripts/services/recentlyActiveService.js\"></script> <script src=\"scripts/directives/help/helpService.js\"></script> <script src=\"scripts/directives/help/help.js\"></script> <script src=\"scripts/controllers/dialogController.js\"></script> <script src=\"scripts/directives/bottomNavigationBar/bottomNavigationBar.js\"></script> <script src=\"scripts/controllers/settings.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSetting.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSettingService.js\"></script> <script src=\"scripts/services/programconversionservice.js\"></script> <script src=\"scripts/services/adWeightService.js\"></script> <script src=\"scripts/services/adTriggerService.js\"></script> <script src=\"scripts/services/sideNavigationService.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBarService.js\"></script> <script src=\"scripts/controllers/upgrade.js\"></script> <script src=\"scripts/controllers/contact.js\"></script> <script src=\"scripts/controllers/help.js\"></script> <script src=\"scripts/directives/resetSetting/resetSetting.js\"></script> <script src=\"scripts/directives/resetSetting/resetSettingService.js\"></script> <script src=\"scripts/directives/dashboardProgramList/dashboardProgramList.js\"></script> <script src=\"scripts/directives/listEmpty/listEmpty.js\"></script> <script src=\"scripts/services/programTypeLevelService.js\"></script> <!-- endbuild --> </body> </html>"
+    "       ga('send', 'pageview');</script> <!-- build:js(.) scripts/vendor.js --> <!-- bower:js --> <script src=\"bower_components/angular/angular.js\"></script> <script src=\"bower_components/angular-animate/angular-animate.js\"></script> <script src=\"bower_components/angular-aria/angular-aria.js\"></script> <script src=\"bower_components/angular-cookies/angular-cookies.js\"></script> <script src=\"bower_components/angular-messages/angular-messages.js\"></script> <script src=\"bower_components/angular-resource/angular-resource.js\"></script> <script src=\"bower_components/angular-route/angular-route.js\"></script> <script src=\"bower_components/angular-sanitize/angular-sanitize.js\"></script> <script src=\"bower_components/angular-touch/angular-touch.js\"></script> <script src=\"bower_components/angular-material/angular-material.js\"></script> <script src=\"bower_components/angular-local-storage/dist/angular-local-storage.js\"></script> <script src=\"bower_components/angular-material-expansion-panel/dist/md-expansion-panel.js\"></script> <!-- endbower --> <!-- endbuild --> <!-- build:js({.tmp,app}) scripts/scripts.js --> <script src=\"scripts/app.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBar.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramType.js\"></script> <script src=\"scripts/controllers/dashboard.js\"></script> <script src=\"scripts/controllers/programList.js\"></script> <script src=\"scripts/controllers/addProgram.js\"></script> <script src=\"scripts/controllers/addProgramType.js\"></script> <script src=\"scripts/controllers/programTypeList.js\"></script> <script src=\"scripts/services/programTypeService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeHeader.js\"></script> <script src=\"scripts/services/exerciseTypeService.js\"></script> <script src=\"scripts/services/utilService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeExercise.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeHeaderService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeExerciseService.js\"></script> <script src=\"scripts/directives/addRemove/addRemove.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeWeek.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeWeekService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeDay.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeDayService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeSet.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeSetService.js\"></script> <script src=\"scripts/services/addProgramTypeService.js\"></script> <script src=\"scripts/services/storageService.js\"></script> <script src=\"scripts/services/keyHandlerService.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeList.js\"></script> <script src=\"scripts/directives/list/list.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeListService.js\"></script> <script src=\"scripts/controllers/programTypeInformation.js\"></script> <script src=\"scripts/controllers/programInformation.js\"></script> <script src=\"scripts/services/programTypeInformationService.js\"></script> <script src=\"scripts/directives/addProgram/addProgram.js\"></script> <script src=\"scripts/directives/programList/programList.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeader.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeaderService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExerciseService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExercise.js\"></script> <script src=\"scripts/services/programService.js\"></script> <script src=\"scripts/directives/programList/programListService.js\"></script> <script src=\"scripts/services/programInformationService.js\"></script> <script src=\"scripts/controllers/editProgram.js\"></script> <script src=\"scripts/services/addProgramService.js\"></script> <script src=\"scripts/controllers/editProgramType.js\"></script> <script src=\"scripts/directives/messageCard/messageCard.js\"></script> <script src=\"scripts/services/toastService.js\"></script> <script src=\"scripts/services/defaultProgramTypeService.js\"></script> <script src=\"scripts/services/unitService.js\"></script> <script src=\"scripts/services/dashboardService.js\"></script> <script src=\"scripts/directives/highlightCard/highlightCard.js\"></script> <script src=\"scripts/directives/quickComplete/quickComplete.js\"></script> <script src=\"scripts/directives/quickComplete/quickCompleteService.js\"></script> <script src=\"scripts/services/recentlyActiveService.js\"></script> <script src=\"scripts/directives/help/helpService.js\"></script> <script src=\"scripts/directives/help/help.js\"></script> <script src=\"scripts/controllers/dialogController.js\"></script> <script src=\"scripts/directives/bottomNavigationBar/bottomNavigationBar.js\"></script> <script src=\"scripts/controllers/settings.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSetting.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSettingService.js\"></script> <script src=\"scripts/services/programconversionservice.js\"></script> <script src=\"scripts/services/adWeightService.js\"></script> <script src=\"scripts/services/adTriggerService.js\"></script> <script src=\"scripts/services/sideNavigationService.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBarService.js\"></script> <script src=\"scripts/controllers/upgrade.js\"></script> <script src=\"scripts/controllers/contact.js\"></script> <script src=\"scripts/controllers/help.js\"></script> <script src=\"scripts/directives/resetSetting/resetSetting.js\"></script> <script src=\"scripts/directives/resetSetting/resetSettingService.js\"></script> <script src=\"scripts/directives/dashboardProgramList/dashboardProgramList.js\"></script> <script src=\"scripts/directives/listEmpty/listEmpty.js\"></script> <script src=\"scripts/services/programTypeLevelService.js\"></script> <script src=\"scripts/directives/listFilter/listFilter.js\"></script> <!-- endbuild --> </body> </html>"
   );
 
 
@@ -7083,6 +7148,11 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
   );
 
 
+  $templateCache.put('scripts/directives/listFilter/listFilterView.html',
+    "<div layout=\"column\"> <div layout=\"row\" layout-align=\"center none\"> <div layout=\"column\" flex=\"grow\"> <md-input-container class=\"no-margin-bottom margin-top-4\"> <label><md-icon class=\"padding-right-4\" md-svg-src=\"images/icons/searchBlack.svg\"></md-icon>Filter</label> <input ng-model=\"filterValue\" flex> </md-input-container> </div> <div layout=\"column\" flex=\"nogrow\"> <md-button class=\"md-icon-button\" ng-click=\"clear()\" aria-label=\"Clear\"> <md-icon class=\"padding-right-4\" md-svg-src=\"images/icons/clearBlack.svg\"></md-icon> </md-button> </div> </div> </div>"
+  );
+
+
   $templateCache.put('scripts/directives/messageCard/messageCardView.html',
     "<div class=\"column\"> <md-card md-colors=\"{ background: 'orange-200' }\"> <md-card-title class=\"padding-top-16 padding-bottom-8\"> <md-card-title-text layout-align=\"center center\">{{message}}</md-card-title-text> </md-card-title> <md-card-actions class=\"margin-bottom-16\" layout=\"column\" layout-align=\"center center\"> <md-button class=\"md-raised\" md-colors=\"{ background: 'orange-700', color: 'grey-900' }\" ng-click=\"buttonClicked()\">{{buttonText}}</md-button> </md-card-actions> </md-card> </div>"
   );
@@ -7169,7 +7239,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('views/programList.html',
-    "<div layout=\"column\" layout-padding> <program-list ng-if=\"programs && programs.length > 0\" programs=\"programs\" remove-function=\"removeFunction\" edit-function=\"editFunction\"></program-list> <list-empty ng-if=\"!programs || programs.length <= 0\" message=\"emptyListMessage\" button-text=\"emptyListButtonText\" button-link=\"emptyListButtonLink\"></list-empty> </div>"
+    "<div layout=\"column\" layout-padding> <list-filter class=\"no-padding-bottom\" filter-value=\"filterValue\"></list-filter> <program-list class=\"no-padding-top\" ng-if=\"programs && programs.length > 0\" programs=\"programs\" remove-function=\"removeFunction\" edit-function=\"editFunction\"></program-list> <list-empty ng-if=\"!programs || programs.length <= 0\" message=\"emptyListMessage\" button-text=\"emptyListButtonText\" button-link=\"emptyListButtonLink\"></list-empty> </div>"
   );
 
 
@@ -7179,7 +7249,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('views/programTypeList.html',
-    "<div layout=\"column\" layout-padding> <program-type-list program-types=\"programTypes\"></program-type-list> </div>"
+    "<div layout=\"column\" layout-padding> <list-filter class=\"no-padding-bottom\" filter-value=\"filterValue\"></list-filter> <program-type-list ng-if=\"programTypes || programTypes.length > 0\" program-types=\"programTypes\"></program-type-list> <list-empty ng-if=\"!programTypes || programTypes.length <= 0\" message=\"emptyListMessage\" button-text=\"emptyListButtonText\" button-link=\"emptyListButtonLink\"></list-empty> </div>"
   );
 
 
