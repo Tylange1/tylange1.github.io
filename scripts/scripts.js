@@ -397,8 +397,8 @@ angular.module('powerHouseApp')
  * Service in the powerHouseApp.
  */
 angular.module('powerHouseApp')
-  .service('programTypeService', ['utilService', 'storageService', 'keyHandlerService', 'toastService', 'defaultProgramTypeService', 'programTypeLevelService', 
-  function (utilService, storageService, keyHandlerService, toastService, defaultProgramTypeService, programTypeLevelService) {
+  .service('programTypeService', ['utilService', 'storageService', 'keyHandlerService', 'toastService', 'defaultProgramTypeService', 
+  function (utilService, storageService, keyHandlerService, toastService, defaultProgramTypeService) {
     
     var contract = {
       programTypes: []
@@ -3172,8 +3172,8 @@ angular.module('powerHouseApp')
         'id': 2,
         'totalNumberOfSets': 195,
         'programTypeName': 'Smolov',
-        'level': { 'id': 0, 'name': 'Beginner' },
-        'description': 'Smolov Junior is a shortened version of the Smolov squatting routine. This routine takes place four days a week and can often be used for bench press as an alternative to squats.',
+        'level': { 'id': 2, 'name': 'Expert' },
+        'description': 'Smolov is a russian thirteen week squat training program. This program consists of five cycles including the phase in cycle, base cycle, switching phase, intense cycle and taper week. Note this program is for experts and is extremely challenging.',
         'exercises': [
           {
             'id': 0,
@@ -5003,6 +5003,8 @@ angular.module('powerHouseApp')
         'id': 3,
         'totalNumberOfSets': 47,
         'programTypeName': 'Wendler\'s 5\/3\/1',
+        'level': { 'id': 1, 'name': 'Intermediate' },
+        'description': 'Jim Wendler\'s 5/3/1 progam starts with a relatively light weight percentage and consitently increases the weight percentage in order to hit new exercise repetitions personal records.',
         'exercises': [
           {
             'id': 0,
@@ -6769,9 +6771,9 @@ angular.module('powerHouseApp')
  * Controller of the powerHouseApp
  */
 angular.module('powerHouseApp')
-  .controller('ContactCtrl', function () {
-  });
-
+  .controller('ContactCtrl', ['$scope', function ($scope) {
+    $scope.email = 'tylangesmith1995@gmail.com';
+  }]);
 'use strict';
 
 /**
@@ -7137,7 +7139,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('views/contact.html',
-    "<div layout=\"column\" layout-padding> <div layout=\"column\" layout-align=\"none center\"> <h3>Contact comming soon.</h3> </div> </div>"
+    "<div layout=\"column\" layout-padding> <div layout=\"column\"> <md-card> <md-card-header class=\"no-padding-right\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header-text layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <span class=\"font-weight-600\">Contact</span> </div> </md-card-header-text> </md-card-header> <md-card-content> <div layout=\"row\" layout-align=\"center center\" flex> <md-icon class=\"margin-right-16\" md-svg-icon=\"images/icons/email.svg\" flex=\"nogrow\"></md-icon> <span flex=\"grow\">{{email}}</span> </div> </md-card-content> </md-card> </div> </div>"
   );
 
 
@@ -7157,7 +7159,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('views/help.html',
-    "<div layout=\"column\" layout-padding> <div layout=\"column\" layout-align=\"none center\"> <h3>Help comming soon.</h3> </div> </div>"
+    "<div layout=\"column\" layout-padding> <div layout=\"column\" layout-align=\"none center\"> <h3>Help coming soon.</h3> </div> </div>"
   );
 
 
@@ -7187,7 +7189,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('views/upgrade.html',
-    "<div layout=\"column\" layout-padding> <div layout=\"column\" layout-align=\"none center\"> <h3>Upgrade comming soon.</h3> </div> </div>"
+    "<div layout=\"column\" layout-padding> <div layout=\"column\" layout-align=\"none center\"> <h3>Premium app coming soon.</h3> </div> </div>"
   );
 
 }]);
