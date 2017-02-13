@@ -72,6 +72,26 @@ angular
         controller: 'SettingsCtrl',
         controllerAs: 'settings'
       })
+      .when('/info', {
+        templateUrl: 'views/info.html',
+        controller: 'InfoCtrl',
+        controllerAs: 'info'
+      })
+      .when('/upgrade', {
+        templateUrl: 'views/upgrade.html',
+        controller: 'UpgradeCtrl',
+        controllerAs: 'upgrade'
+      })
+      .when('/contact', {
+        templateUrl: 'views/contact.html',
+        controller: 'ContactCtrl',
+        controllerAs: 'contact'
+      })
+      .when('/help', {
+        templateUrl: 'views/help.html',
+        controller: 'HelpCtrl',
+        controllerAs: 'help'
+      })
       .otherwise({
         redirectTo: '/'
       });
@@ -94,14 +114,20 @@ angular
  * # NavigationBar
  */
 angular.module('powerHouseApp')
-  .directive('navigationBar', function () {
+  .directive('navigationBar', ['navigationBarService', function (navigationBarService) {
     return {
       templateUrl: 'scripts/directives/navigationBar/navigationBarView.html',
       restrict: 'E',
-      link: function postLink() {
+      link: function postLink(scope) {
+
+        scope.sideMenuItems = navigationBarService.sideMenuItems;        
+
+        scope.toggleSidenav = function(){
+          navigationBarService.toggleSidenav();
+        };
       }
     };
-  });
+  }]);
 
 'use strict';
 
@@ -118,6 +144,8 @@ angular.module('powerHouseApp')
       restrict: 'E',
       scope: {
         programTypeName: '=',
+        description: '=',
+        level: '=',
         exercises: '=',
         weeks: '=',
         addFunction: '=',
@@ -177,13 +205,24 @@ angular.module('powerHouseApp')
     // Quick Complete
     $scope.quickCompleteProgram = dashboardService.quickCompleteProgram;
 
+    // Program List
+    $scope.programs = dashboardService.getActivePrograms(); 
+
+    $scope.$watchCollection(function(){
+      return dashboardService.getActivePrograms();
+    }, function(newValue, oldValue){
+      if(newValue !== oldValue){
+        $scope.programs = dashboardService.getActivePrograms();
+      }
+    });
+
     $scope.$watch(function(){
       return dashboardService.getCompletedPrograms();
     }, function(){
       $scope.completedHighlightText = dashboardService.completedHighlightText;
     });
 
-    $scope.$watch(function(){
+    $scope.$watchCollection(function(){
       return dashboardService.getActivePrograms();
     }, function(){
       $scope.activeHighlightText = dashboardService.activeHighlightText;
@@ -207,7 +246,21 @@ angular.module('powerHouseApp')
  * Controller of the powerHouseApp
  */
 angular.module('powerHouseApp')
-  .controller('programListCtrl', [function () {
+  .controller('programListCtrl', ['$scope', 'programService', function ($scope, programService) {
+    $scope.programs = programService.getPrograms();
+
+    // Empty list
+    $scope.emptyListMessage = 'Start by adding a program';
+    $scope.emptyListButtonText = 'Add Program';
+    $scope.emptyListButtonLink = '#/add-program';
+
+    $scope.$watchCollection(function(){
+      return programService.getPrograms();
+    }, function(newValue, oldValue){
+      if(newValue !== oldValue){
+        $scope.programs = programService.getPrograms();
+      }
+    });
 
   }]);
 
@@ -263,9 +316,11 @@ angular.module('powerHouseApp')
  * Controller of the powerHouseApp
  */
 angular.module('powerHouseApp')
-  .controller('addProgramTypeCtrl', ['$scope', '$location', 'addProgramTypeService', 'toastService', function ($scope, $location, addProgramTypeService, toastService) {
+  .controller('addProgramTypeCtrl', ['$scope', '$location', 'addProgramTypeService', 'toastService', 'programTypeLevelService', function ($scope, $location, addProgramTypeService, toastService, programTypeLevelService) {
 
     $scope.programTypeName = '';
+    $scope.level = programTypeLevelService.getDefault();
+    $scope.description = '';
     $scope.exercises = [];
     $scope.weeks = [];
 
@@ -276,21 +331,27 @@ angular.module('powerHouseApp')
 
     $scope.removeFunction = function(){
       var tempProgramTypeName = angular.copy($scope.programTypeName);
+      var tempProgramLevel = angular.copy($scope.level);
+      var tempProgramDescription = angular.copy($scope.description);
       var tempExercises = angular.copy($scope.exercises);
       var tempWeeks = angular.copy($scope.weeks);
       toastService.showUndoToast('Program type removed', function(){
         $scope.programTypeName = tempProgramTypeName;
+        $scope.level = tempProgramLevel;
+        $scope.description = tempProgramDescription;
         $scope.exercises = tempExercises;
         $scope.weeks = tempWeeks;
       });
 
       $scope.programTypeName = '';
+      $scope.level = programTypeLevelService.getDefault();
+      $scope.description = '';
       $scope.exercises = [];
       $scope.weeks = [];
     };
 
-    $scope.invalidFunction = function(programName, exercises, weeks){
-      return addProgramTypeService.isInvalid(programName, exercises, weeks);
+    $scope.invalidFunction = function(programName, level, description, exercises, weeks){
+      return addProgramTypeService.isInvalid(programName, level, description, exercises, weeks);
     };
 
     $scope.$watchCollection(function(){
@@ -300,8 +361,6 @@ angular.module('powerHouseApp')
         addProgramTypeService.exercises = newValue;
       }
     });
-
-
   }]);
 
 'use strict';
@@ -314,9 +373,19 @@ angular.module('powerHouseApp')
  * Controller of the powerHouseApp
  */
 angular.module('powerHouseApp')
-  .controller('ProgramTypeListCtrl', function () {
+  .controller('ProgramTypeListCtrl', ['$scope', 'programTypeService', function ($scope, programTypeService) {
+
+    $scope.programTypes = programTypeService.getProgramTypes();
+
+    $scope.$watch(function(){
+      return programTypeService.getProgramTypes();
+    }, function(newValue, oldValue){
+      if(newValue !== oldValue){
+        $scope.programTypes = programTypeService.getProgramTypes();
+      }
+    });
     
-  });
+  }]);
 
 'use strict';
 
@@ -328,7 +397,8 @@ angular.module('powerHouseApp')
  * Service in the powerHouseApp.
  */
 angular.module('powerHouseApp')
-  .service('programTypeService', ['utilService', 'storageService', 'keyHandlerService', 'toastService', 'defaultProgramTypeService', function (utilService, storageService, keyHandlerService, toastService, defaultProgramTypeService) {
+  .service('programTypeService', ['utilService', 'storageService', 'keyHandlerService', 'toastService', 'defaultProgramTypeService', 'programTypeLevelService', 
+  function (utilService, storageService, keyHandlerService, toastService, defaultProgramTypeService, programTypeLevelService) {
     
     var contract = {
       programTypes: []
@@ -338,8 +408,13 @@ angular.module('powerHouseApp')
       contract.programTypes = defaultProgramTypeService.getDefaultProgramTypes().concat(getProgramTypesFromStorage());
     };
 
-    contract.addProgramType = function(programTypeName, exercises, weeks){
-      var programType = generateProgramType(programTypeName, exercises, weeks);
+    contract.reset = function(){
+      contract.programTypes = defaultProgramTypeService.getDefaultProgramTypes();
+      storeProgramTypes();
+    };
+
+    contract.addProgramType = function(programTypeName, level, description, exercises, weeks){
+      var programType = generateProgramType(programTypeName, level, description, exercises, weeks);
       contract.programTypes.push(programType);
       // console.log(angular.toJson(programType));
       // contract.programTypes.push(generateProgramType(programTypeName, exercises, weeks));
@@ -388,7 +463,7 @@ angular.module('powerHouseApp')
       utilService.isDefined(programType.totalNumberOfSets) && utilService.isDefined(programType.programTypeName) && 
       utilService.isDefined(programType.exercises) && utilService.isDefined(programType.weeks));
     };
-
+    
     var storeProgramTypes = function(){
       storageService.storeValue(keyHandlerService.keys.programType, getNonDefaultProgramTypes(contract.programTypes));
     };
@@ -403,9 +478,11 @@ angular.module('powerHouseApp')
       return storageService.getValueOrDefault(keyHandlerService.keys.programType, []);
     };
 
-    var generateProgramType = function(programTypeName, exercises, weeks){
+    var generateProgramType = function(programTypeName, level, description, exercises, weeks){
       return {
         id: utilService.getUniqueId(contract.programTypes),
+        description: description,
+        level: level,
         totalNumberOfSets: calculateNumberOfSets(weeks),
         programTypeName: programTypeName,
         exercises: exercises,
@@ -443,15 +520,19 @@ angular.module('powerHouseApp')
  * # addProgramTypeName
  */
 angular.module('powerHouseApp')
-  .directive('addProgramTypeName', ['addProgramTypeNameService', function (addProgramTypeNameService) {
+  .directive('addProgramTypeHeader', ['addProgramTypeHeaderService', function (addProgramTypeNameService) {
     return {
-      templateUrl: 'scripts/directives/addProgramType/addProgramTypeNameView.html',
+      templateUrl: 'scripts/directives/addProgramType/addProgramTypeHeaderView.html',
       restrict: 'E',
       scope: {
-        programTypeName: '='
+        programTypeName: '=',
+        level: '=',
+        description: '='
       },
       link: function postLink(scope) {
         scope.helpAddProgramTypeUrl = addProgramTypeNameService.helpAddProgramTypeUrl;
+
+        scope.levels = addProgramTypeNameService.getLevels();
 
         scope.$watch(function(){
           return scope.programTypeName;
@@ -580,6 +661,13 @@ angular.module('powerHouseApp')
         return (Math.round(((contract.getNumber(number)) / contract.getNumber(increments))) * contract.getNumber(increments)).toFixed(contract.getNumber(dp));
       };
 
+      contract.getValueOrDefault = function(value, dValue){
+        if(contract.isUndefined(value)){
+          return dValue;
+        }
+        return value;
+      };
+
       return contract;
   });
 
@@ -651,9 +739,13 @@ angular.module('powerHouseApp')
  * Service in the powerHouseApp.
  */
 angular.module('powerHouseApp')
-  .service('addProgramTypeNameService', [function () {
+  .service('addProgramTypeHeaderService', ['programTypeLevelService', function (programTypeLevelService) {
     var contract = {
       helpAddProgramTypeUrl: 'scripts/directives/addProgramType/helpAddProgramTypeTemplate.html'
+    };
+
+    contract.getLevels = function(){
+      return programTypeLevelService.getLevels();
     };
 
     return contract;
@@ -1238,12 +1330,12 @@ angular.module('powerHouseApp')
       previousWeeks: []
     };
     
-    contract.addProgramType = function(programTypeName, exercises, weeks){
-      programTypeService.addProgramType(programTypeName, exercises, weeks);
+    contract.addProgramType = function(programTypeName, level, description, exercises, weeks){
+      programTypeService.addProgramType(programTypeName, level, description, exercises, weeks);
     } ;
 
-    contract.isInvalid = function(programName, exercises, weeks){
-      return (isNameInvalid(programName) || isExerciseInvalid(exercises) || isWeeksInvalid(weeks));
+    contract.isInvalid = function(programName, level, description, exercises, weeks){
+      return (isNameInvalid(programName) || isLevelInvalid(level) || isDescriptionInvalid(description) || isExerciseInvalid(exercises) || isWeeksInvalid(weeks));
     };
 
     contract.exerciseRemoved = function(exercises, weeks){
@@ -1270,6 +1362,14 @@ angular.module('powerHouseApp')
 
     var isNameInvalid = function(programName){
       return (utilService.isUndefined(programName) || programName === '' || programTypeService.nameTaken(programName));
+    };
+
+    var isLevelInvalid = function(level){
+      return utilService.isUndefined(level);
+    };
+
+    var isDescriptionInvalid = function(description){
+      return utilService.isUndefined(description);
     };
 
     var isExerciseInvalid = function(exercises){
@@ -1351,11 +1451,11 @@ angular.module('powerHouseApp')
     return {
       templateUrl: 'scripts/directives/programTypeList/ProgramTypeListView.html',
       restrict: 'E',
+      scope: {
+        programTypes: '='
+      },
       link: function postLink(scope) {
-        scope.programTypes = programTypeListService.formatProgramTypes(programTypeService.getProgramTypes());
-        scope.emptyMessage = programTypeListService.emptyMessage;
-        scope.emptyLink = programTypeListService.emptyLink;
-        scope.emptyButtonText = programTypeListService.emptyButtonText;
+        scope.formattedProgramTypes = programTypeListService.formatProgramTypes(scope.programTypes);
 
         scope.editFunction = function(programType){
           $location.path('edit-program-type/' + programType.id);
@@ -1366,10 +1466,10 @@ angular.module('powerHouseApp')
         };
 
         scope.$watchCollection(function(){
-          return programTypeService.getProgramTypes();
+          return scope.programTypes;
         }, function(newValue, oldValue){
           if(newValue !== oldValue){
-            scope.programTypes = programTypeListService.formatProgramTypes(programTypeService.getProgramTypes());
+            scope.formattedProgramTypes = programTypeListService.formatProgramTypes(scope.programTypes);
           }
         });
 
@@ -1393,10 +1493,7 @@ angular.module('powerHouseApp')
       scope: {
         editFunction: '=',
         removeFunction: '=',
-        values: '=',
-        emptyMessage: '=',
-        emptyLink: '=',
-        emptyButtonText: '=',
+        values: '='
       },
       link: function postLink() {
       }
@@ -1414,11 +1511,7 @@ angular.module('powerHouseApp')
  */
 angular.module('powerHouseApp')
   .service('programTypeListService', [function () {
-    var contract = {
-      emptyMessage: 'Start by adding a program type.',
-      emptyLink: 'add-program-type',
-      emptyButtonText: 'Add Program Type'
-    };
+    var contract = {};
 
     contract.formatProgramTypes = function(programTypes){
       return programTypes.map(function(programType){
@@ -1434,7 +1527,8 @@ angular.module('powerHouseApp')
           secondText: 'Total Weeks: ' + programType.weeks.length,
           thirdText: 'Total Sets: ' + programType.totalNumberOfSets,
           href: '#/program-type-information/' + programType.id,
-          removable: !programType.default
+          removable: !programType.default,
+          editable: true
         };
     };
 
@@ -1553,11 +1647,12 @@ angular.module('powerHouseApp')
     return {
       templateUrl: 'scripts/directives/programList/programListView.html',
       restrict: 'E',
+      scope: {
+        programs: '=',
+      },
       link: function postLink(scope) {
-        scope.programs = programListService.formatPrograms(programService.getPrograms());
-        scope.emptyMessage = programListService.emptyMessage;
-        scope.emptyLink = programListService.emptyLink;
-        scope.emptyButtonText = programListService.emptyButtonText;
+
+        scope.formattedPrograms = programListService.formatPrograms(scope.programs);
 
         scope.editFunction = function(program){
           $location.path('edit-program/' + program.id);
@@ -1568,10 +1663,10 @@ angular.module('powerHouseApp')
         };
 
         scope.$watchCollection(function(){
-          return programService.getPrograms();
+          return scope.programs;
         }, function(newValue, oldValue){
           if(newValue !== oldValue){
-            scope.programs = programListService.formatPrograms(programService.getPrograms());
+            scope.formattedPrograms = programListService.formatPrograms(scope.programs);
           }
         });
       }
@@ -1697,6 +1792,11 @@ angular.module('powerHouseApp')
       }
     };
 
+    contract.reset = function(){
+      contract.programs = [];
+      storePrograms();
+    };
+
     contract.convertPrograms = function(){
       contract.programs = programConversionService.convertPrograms(contract.programs);
       if(recentlyActiveService.currentlyActive() === false){
@@ -1737,6 +1837,7 @@ angular.module('powerHouseApp')
 
       recentlyActiveService.removeProgram(program);
       removeProgram(program);
+      recentlyActiveService.updateRecentlyActive(recentlyActiveService.nextActive(contract.getActivePrograms()));
     };
 
     contract.getPrograms = function(){
@@ -1936,11 +2037,7 @@ angular.module('powerHouseApp')
  */
 angular.module('powerHouseApp')
   .service('programListService', ['unitService', function (unitService) {
-    var contract = {
-      emptyMessage: 'Start by adding a program.',
-      emptyLink: 'add-program',
-      emptyButtonText: 'Add Program'
-    };
+    var contract = {};
 
     contract.formatPrograms = function(programs){
       return programs.map(function(program){
@@ -1957,7 +2054,8 @@ angular.module('powerHouseApp')
         thirdText: 'Increment: ' + program.increment + unitService.getCurrentUnit().textName,
         percentage: program.percentComplete,
         href: '#/program-information/' + program.id,
-        removable: !program.default
+        removable: !program.default,
+        editable: true
       };
     };
 
@@ -1990,7 +2088,7 @@ angular.module('powerHouseApp')
  * Controller of the powerHouseApp
  */
 angular.module('powerHouseApp')
-  .controller('EditProgramCtrl', ['$scope', '$routeParams', '$location', 'programService', 'addProgramService', 'utilService', function ($scope, $routeParams, $location, programService, addProgramService, utilService) {
+  .controller('EditProgramCtrl', ['$scope', '$routeParams', '$location', '$window', 'programService', 'addProgramService', 'utilService', function ($scope, $routeParams, $location, $window, programService, addProgramService, utilService) {
 
     $scope.program = programService.getProgram($routeParams.id);
 
@@ -2001,11 +2099,11 @@ angular.module('powerHouseApp')
 
     $scope.addFunction = function(programName, programType, increment, exercises){
       addProgramService.editProgram($scope.program, $scope.program.id, programName, programType, increment, exercises);
-      $location.path('program-list');
+      $window.history.back();
     };
 
     $scope.removeFunction = function(){
-      $location.path('program-information/'+ $scope.program.id);
+      $window.history.back();
     };
 
     $scope.invalidFunction = function(programName, programType, increment, exercises){
@@ -2178,24 +2276,27 @@ angular.module('powerHouseApp')
  * Controller of the powerHouseApp
  */
 angular.module('powerHouseApp')
-  .controller('EditProgramTypeCtrl', ['$scope', '$routeParams', '$location', 'programTypeService', 'addProgramTypeService', function ($scope, $routeParams, $location, programTypeService, addProgramTypeService) {
+  .controller('EditProgramTypeCtrl', ['$scope', '$routeParams', '$location', '$window', 'utilService', 'programTypeService', 'addProgramTypeService', 'programTypeLevelService', 
+  function ($scope, $routeParams, $location, $window,utilService, programTypeService, addProgramTypeService, programTypeLevelService) {
     $scope.programType = programTypeService.getProgramType($routeParams.id);
 
     $scope.programTypeName = angular.copy($scope.programType.programTypeName);
+    $scope.level = angular.copy(utilService.getValueOrDefault($scope.programType.level, programTypeLevelService.getDefault()));
+    $scope.description = angular.copy(utilService.getValueOrDefault($scope.programType.description, ''));
     $scope.exercises = angular.copy($scope.programType.exercises);
     $scope.weeks = angular.copy($scope.programType.weeks);
 
-    $scope.addFunction = function(programTypeName, exercises, weeks){
-      addProgramTypeService.addProgramType(programTypeName, exercises, weeks);
+    $scope.addFunction = function(programTypeName, level, description, exercises, weeks){
+      addProgramTypeService.addProgramType(programTypeName, level, description, exercises, weeks);
       $location.path('program-type-list');
     };
 
     $scope.removeFunction = function(){
-      $location.path('program-type-information/'+ $scope.programType.id);
+      $window.history.back();
     };
 
-    $scope.invalidFunction = function(programName, exercises, weeks){
-      return addProgramTypeService.isInvalid(programName, exercises, weeks);
+    $scope.invalidFunction = function(programName, level, description, exercises, weeks){
+      return addProgramTypeService.isInvalid(programName, level, description, exercises, weeks);
     };
 
     $scope.$watchCollection(function(){
@@ -2286,6 +2387,8 @@ angular.module('powerHouseApp')
         'id':0,
         'totalNumberOfSets':78,
         'programTypeName':'5 by 5',
+        'level': { 'id': 0, 'name': 'Beginner' },
+        'description': '5 by 5 is a proved workout routine to gain strength, build muscle and burn fat. Five compound exercises are used in varying combinations with differing increment multipliers. This routine requires three days a week taking around fourty-five minutes per sessions to complete.',
         'exercises':[  
             {  
               'id':0,
@@ -2726,6 +2829,8 @@ angular.module('powerHouseApp')
         'id':1,
         'totalNumberOfSets':93,
         'programTypeName':'Smolov Junior',
+        'level': { 'id': 1, 'name': 'Intermediate' },
+        'description': 'Smolov Junior is a shortened version of the Smolov squatting routine. This routine takes place four days a week and can often be used for bench press as an alternative to squats.',
         'exercises':[  
             {  
               'id':0,
@@ -3067,6 +3172,8 @@ angular.module('powerHouseApp')
         'id': 2,
         'totalNumberOfSets': 195,
         'programTypeName': 'Smolov',
+        'level': { 'id': 0, 'name': 'Beginner' },
+        'description': 'Smolov Junior is a shortened version of the Smolov squatting routine. This routine takes place four days a week and can often be used for bench press as an alternative to squats.',
         'exercises': [
           {
             'id': 0,
@@ -5973,6 +6080,10 @@ angular.module('powerHouseApp')
       contract.currentUnit = getUnitFromStorage();
     };
 
+    contract.reset = function(){
+      contract.changeUnit('kilograms');
+    };
+
     contract.changeUnit = function(key){
       contract.currentUnit = key;
       storeUnit();
@@ -6042,10 +6153,10 @@ angular.module('powerHouseApp')
     };
 
     contract.getActivePrograms = function(){
-      var activePrograms = programService.getActivePrograms().length;
+      var activePrograms = programService.getActivePrograms();
 
-      if(changed(contract.activeHighlightText, activePrograms)){
-        contract.activeHighlightText = activePrograms;
+      if(changed(contract.activeHighlightText, activePrograms.length)){
+        contract.activeHighlightText = activePrograms.length;
       }
 
       return activePrograms;
@@ -6218,6 +6329,10 @@ angular.module('powerHouseApp')
       contract.recentlyActive = getRecentlyActiveFromStorage();
     };
 
+    contract.reset = function(){
+      contract.updateRecentlyActive({});
+    };
+
     contract.getRecentlyActive = function(){
       return contract.recentlyActive;
     };
@@ -6383,7 +6498,7 @@ angular.module('powerHouseApp')
  * # weightUnitSetting
  */
 angular.module('powerHouseApp')
-  .directive('weightUnitSetting', ['weightUnitSettingService', function (weightUnitSettingService) {
+  .directive('weightUnitSetting', ['weightUnitSettingService', 'unitService', function (weightUnitSettingService, unitService) {
     return {
       templateUrl: 'scripts/directives/weightUnitSetting/weightUnitSettingView.html',
       restrict: 'E',
@@ -6392,12 +6507,21 @@ angular.module('powerHouseApp')
         scope.currentUnit = weightUnitSettingService.getCurrentUnit();
 
         scope.$watch(function(){
-          return scope.currentUnit.name;
+          return scope.currentUnit;
         }, function(newValue, oldValue){
           if(newValue !== oldValue){
-            weightUnitSettingService.changeUnit(scope.currentUnit);
+            weightUnitSettingService.changeUnit(newValue);
+          }
+        }, true);
+
+        scope.$watch(function(){
+          return unitService.currentUnit;
+        }, function(newValue, oldValue){
+          if(newValue !== oldValue && scope.currentUnit.name !== newValue){
+            scope.currentUnit = weightUnitSettingService.getCurrentUnit();
           }
         });
+
       }
     };
   }]);
@@ -6558,6 +6682,259 @@ angular.module('powerHouseApp')
     return contract;
   });
 
+'use strict';
+
+/**
+ * @ngdoc service
+ * @name powerHouseApp.sideNavigationService
+ * @description
+ * # sideNavigationService
+ * Service in the powerHouseApp.
+ */
+angular.module('powerHouseApp')
+  .service('sideNavigationService', ['$mdSidenav', function ($mdSidenav) {
+    var contract = {};
+
+    contract.toggleSidenav = function(id){
+      $mdSidenav(id).toggle();
+    };
+
+    return contract;
+  }]);
+
+'use strict';
+
+/**
+ * @ngdoc service
+ * @name powerHouseApp.navigationBarService
+ * @description
+ * # navigationBarService
+ * Service in the powerHouseApp.
+ */
+angular.module('powerHouseApp')
+  .service('navigationBarService', ['sideNavigationService', function (sideNavigationService) {
+    var contract = {
+      id: 'sidenav',
+      sideMenuItems: [
+        {
+          text: 'Settings',
+          icon: 'images/icons/settingsBlack.svg',
+          href: '#/settings'
+        },
+        {
+          text: 'Help',
+          icon: 'images/icons/info.svg',
+          href: '#/help'
+        },
+        {
+          text: 'Upgrade',
+          icon: 'images/icons/moneyBlack.svg',
+          href: '#/upgrade'
+        },
+        {
+          text: 'Contact',
+          icon: 'images/icons/email.svg',
+          href: '#/contact'
+        },
+      ]
+    };
+
+    contract.toggleSidenav = function(){
+      sideNavigationService.toggleSidenav(contract.id);
+    };
+
+    return contract;
+  }]);
+
+'use strict';
+
+/**
+ * @ngdoc function
+ * @name powerHouseApp.controller:UpgradeCtrl
+ * @description
+ * # UpgradeCtrl
+ * Controller of the powerHouseApp
+ */
+angular.module('powerHouseApp')
+  .controller('UpgradeCtrl', function () {
+  });
+
+'use strict';
+
+/**
+ * @ngdoc function
+ * @name powerHouseApp.controller:ContactCtrl
+ * @description
+ * # ContactCtrl
+ * Controller of the powerHouseApp
+ */
+angular.module('powerHouseApp')
+  .controller('ContactCtrl', function () {
+  });
+
+'use strict';
+
+/**
+ * @ngdoc function
+ * @name powerHouseApp.controller:HelpCtrl
+ * @description
+ * # HelpCtrl
+ * Controller of the powerHouseApp
+ */
+angular.module('powerHouseApp')
+  .controller('HelpCtrl', function () {
+  });
+
+'use strict';
+
+/**
+ * @ngdoc directive
+ * @name powerHouseApp.directive:resetSetting
+ * @description
+ * # resetSetting
+ */
+angular.module('powerHouseApp')
+  .directive('resetSetting', ['resetSettingService', function (resetSettingService) {
+    return {
+      templateUrl: 'scripts/directives/resetSetting/resetSettingView.html',
+      restrict: 'E',
+      link: function postLink(scope) {
+        scope.helpResetSetting = resetSettingService.helpResetSetting;
+
+        scope.resetClicked = function(){
+          resetSettingService.resetClicked();
+        };
+      }
+    };
+  }]);
+
+'use strict';
+
+/**
+ * @ngdoc service
+ * @name powerHouseApp.resetSettingService
+ * @description
+ * # resetSettingService
+ * Service in the powerHouseApp.
+ */
+angular.module('powerHouseApp')
+  .service('resetSettingService', ['$mdDialog', 'programService', 'programTypeService', 'recentlyActiveService', 'unitService', function ($mdDialog, programService, programTypeService, recentlyActiveService, unitService) {
+    var contract = {
+      helpResetSetting: 'scripts/directives/resetSetting/helpResetSetting.html'
+    };
+
+    contract.resetClicked = function(){
+      var confirm = $mdDialog.confirm()
+        .title('Reset')
+        .textContent('Are you sure you want to reset, this action cannot be undone.')
+        .ariaLabel('Reset')
+        .ok('Reset')
+        .cancel('Cancel');
+
+        $mdDialog.show(confirm)
+          .then(function(){
+          reset();
+        });
+    };
+
+    var reset = function(){
+      programService.reset();
+      programTypeService.reset();
+      recentlyActiveService.reset();
+      unitService.reset();
+    };
+
+    return contract;
+  }]);
+
+'use strict';
+
+/**
+ * @ngdoc directive
+ * @name powerHouseApp.directive:dashboardProgramList
+ * @description
+ * # dashboardProgramList
+ */
+angular.module('powerHouseApp')
+  .directive('dashboardProgramList', [function () {
+    return {
+      templateUrl: 'scripts/directives/dashboardProgramList/dashboardProgramListView.html',
+      restrict: 'E',
+      scope: {
+        programs: '='
+      },
+      link: function postLink(scope) {
+        scope.emptyListMessage = 'No currently active programs';
+        scope.emptyListButtonText = 'Add Program';
+        scope.emptyListButtonList = '#/add-program';
+        scope.helpActiveProgramListUrl = 'scripts/directives/dashboardProgramList/helpDashboardProgramListTemplate.html';
+      }
+    };
+  }]);
+
+'use strict';
+
+/**
+ * @ngdoc directive
+ * @name powerHouseApp.directive:listEmpty
+ * @description
+ * # listEmpty
+ */
+angular.module('powerHouseApp')
+  .directive('listEmpty', function () {
+    return {
+      templateUrl: 'scripts/directives/listEmpty/listEmptyView.html',
+      restrict: 'E',
+      scope: {
+        message: '=',
+        buttonText: '=',
+        buttonLink: '='
+      },
+      link: function postLink() {
+        
+      }
+    };
+  });
+
+'use strict';
+
+/**
+ * @ngdoc service
+ * @name powerHouseApp.programTypeLevelService
+ * @description
+ * # programTypeLevelService
+ * Service in the powerHouseApp.
+ */
+angular.module('powerHouseApp')
+  .service('programTypeLevelService', function () {
+    var contract = {};
+    
+    var levels = [
+      { id: 0, name: 'Beginner' },
+      { id: 1, name: 'Intermediate' },
+      { id: 2, name: 'Expert' }
+    ];
+
+    contract.getLevels = function(){
+      return levels;
+    };
+
+    contract.getDefault = function(){
+      return levels[0];
+    };
+
+    contract.getLevelById = function(id){
+      for(var i = 0; i < levels.length; i++){
+        var level = levels[i];
+        if(level.id === id){
+          return level; 
+        }
+      }     
+    };
+
+    return contract;
+  });
+
 angular.module('powerHouseApp').run(['$templateCache', function($templateCache) {
   'use strict';
 
@@ -6578,7 +6955,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
     "\n" +
     "       ga('create', 'UA-XXXXX-X');\r" +
     "\n" +
-    "       ga('send', 'pageview');</script> <!-- build:js(.) scripts/vendor.js --> <!-- bower:js --> <script src=\"bower_components/angular/angular.js\"></script> <script src=\"bower_components/angular-animate/angular-animate.js\"></script> <script src=\"bower_components/angular-aria/angular-aria.js\"></script> <script src=\"bower_components/angular-cookies/angular-cookies.js\"></script> <script src=\"bower_components/angular-messages/angular-messages.js\"></script> <script src=\"bower_components/angular-resource/angular-resource.js\"></script> <script src=\"bower_components/angular-route/angular-route.js\"></script> <script src=\"bower_components/angular-sanitize/angular-sanitize.js\"></script> <script src=\"bower_components/angular-touch/angular-touch.js\"></script> <script src=\"bower_components/angular-material/angular-material.js\"></script> <script src=\"bower_components/angular-local-storage/dist/angular-local-storage.js\"></script> <script src=\"bower_components/angular-material-expansion-panel/dist/md-expansion-panel.js\"></script> <!-- endbower --> <!-- endbuild --> <!-- build:js({.tmp,app}) scripts/scripts.js --> <script src=\"scripts/app.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBar.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramType.js\"></script> <script src=\"scripts/controllers/dashboard.js\"></script> <script src=\"scripts/controllers/programList.js\"></script> <script src=\"scripts/controllers/addProgram.js\"></script> <script src=\"scripts/controllers/addProgramType.js\"></script> <script src=\"scripts/controllers/programTypeList.js\"></script> <script src=\"scripts/services/programTypeService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeName.js\"></script> <script src=\"scripts/services/exerciseTypeService.js\"></script> <script src=\"scripts/services/utilService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeExercise.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeNameService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeExerciseService.js\"></script> <script src=\"scripts/directives/addRemove/addRemove.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeWeek.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeWeekService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeDay.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeDayService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeSet.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeSetService.js\"></script> <script src=\"scripts/services/addProgramTypeService.js\"></script> <script src=\"scripts/services/storageService.js\"></script> <script src=\"scripts/services/keyHandlerService.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeList.js\"></script> <script src=\"scripts/directives/list/list.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeListService.js\"></script> <script src=\"scripts/controllers/programTypeInformation.js\"></script> <script src=\"scripts/controllers/programInformation.js\"></script> <script src=\"scripts/services/programTypeInformationService.js\"></script> <script src=\"scripts/directives/addProgram/addProgram.js\"></script> <script src=\"scripts/directives/programList/programList.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeader.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeaderService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExerciseService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExercise.js\"></script> <script src=\"scripts/services/programService.js\"></script> <script src=\"scripts/directives/programList/programListService.js\"></script> <script src=\"scripts/services/programInformationService.js\"></script> <script src=\"scripts/controllers/editProgram.js\"></script> <script src=\"scripts/services/addProgramService.js\"></script> <script src=\"scripts/controllers/editProgramType.js\"></script> <script src=\"scripts/directives/messageCard/messageCard.js\"></script> <script src=\"scripts/services/toastService.js\"></script> <script src=\"scripts/services/defaultProgramTypeService.js\"></script> <script src=\"scripts/services/unitService.js\"></script> <script src=\"scripts/services/dashboardService.js\"></script> <script src=\"scripts/directives/highlightCard/highlightCard.js\"></script> <script src=\"scripts/directives/quickComplete/quickComplete.js\"></script> <script src=\"scripts/directives/quickComplete/quickCompleteService.js\"></script> <script src=\"scripts/services/recentlyActiveService.js\"></script> <script src=\"scripts/directives/help/helpService.js\"></script> <script src=\"scripts/directives/help/help.js\"></script> <script src=\"scripts/controllers/dialogController.js\"></script> <script src=\"scripts/directives/bottomNavigationBar/bottomNavigationBar.js\"></script> <script src=\"scripts/controllers/settings.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSetting.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSettingService.js\"></script> <script src=\"scripts/services/programconversionservice.js\"></script> <script src=\"scripts/services/adWeightService.js\"></script> <script src=\"scripts/services/adTriggerService.js\"></script> <!-- endbuild --> </body> </html>"
+    "       ga('send', 'pageview');</script> <!-- build:js(.) scripts/vendor.js --> <!-- bower:js --> <script src=\"bower_components/angular/angular.js\"></script> <script src=\"bower_components/angular-animate/angular-animate.js\"></script> <script src=\"bower_components/angular-aria/angular-aria.js\"></script> <script src=\"bower_components/angular-cookies/angular-cookies.js\"></script> <script src=\"bower_components/angular-messages/angular-messages.js\"></script> <script src=\"bower_components/angular-resource/angular-resource.js\"></script> <script src=\"bower_components/angular-route/angular-route.js\"></script> <script src=\"bower_components/angular-sanitize/angular-sanitize.js\"></script> <script src=\"bower_components/angular-touch/angular-touch.js\"></script> <script src=\"bower_components/angular-material/angular-material.js\"></script> <script src=\"bower_components/angular-local-storage/dist/angular-local-storage.js\"></script> <script src=\"bower_components/angular-material-expansion-panel/dist/md-expansion-panel.js\"></script> <!-- endbower --> <!-- endbuild --> <!-- build:js({.tmp,app}) scripts/scripts.js --> <script src=\"scripts/app.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBar.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramType.js\"></script> <script src=\"scripts/controllers/dashboard.js\"></script> <script src=\"scripts/controllers/programList.js\"></script> <script src=\"scripts/controllers/addProgram.js\"></script> <script src=\"scripts/controllers/addProgramType.js\"></script> <script src=\"scripts/controllers/programTypeList.js\"></script> <script src=\"scripts/services/programTypeService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeHeader.js\"></script> <script src=\"scripts/services/exerciseTypeService.js\"></script> <script src=\"scripts/services/utilService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeExercise.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeHeaderService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeExerciseService.js\"></script> <script src=\"scripts/directives/addRemove/addRemove.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeWeek.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeWeekService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeDay.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeDayService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeSet.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeSetService.js\"></script> <script src=\"scripts/services/addProgramTypeService.js\"></script> <script src=\"scripts/services/storageService.js\"></script> <script src=\"scripts/services/keyHandlerService.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeList.js\"></script> <script src=\"scripts/directives/list/list.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeListService.js\"></script> <script src=\"scripts/controllers/programTypeInformation.js\"></script> <script src=\"scripts/controllers/programInformation.js\"></script> <script src=\"scripts/services/programTypeInformationService.js\"></script> <script src=\"scripts/directives/addProgram/addProgram.js\"></script> <script src=\"scripts/directives/programList/programList.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeader.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeaderService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExerciseService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExercise.js\"></script> <script src=\"scripts/services/programService.js\"></script> <script src=\"scripts/directives/programList/programListService.js\"></script> <script src=\"scripts/services/programInformationService.js\"></script> <script src=\"scripts/controllers/editProgram.js\"></script> <script src=\"scripts/services/addProgramService.js\"></script> <script src=\"scripts/controllers/editProgramType.js\"></script> <script src=\"scripts/directives/messageCard/messageCard.js\"></script> <script src=\"scripts/services/toastService.js\"></script> <script src=\"scripts/services/defaultProgramTypeService.js\"></script> <script src=\"scripts/services/unitService.js\"></script> <script src=\"scripts/services/dashboardService.js\"></script> <script src=\"scripts/directives/highlightCard/highlightCard.js\"></script> <script src=\"scripts/directives/quickComplete/quickComplete.js\"></script> <script src=\"scripts/directives/quickComplete/quickCompleteService.js\"></script> <script src=\"scripts/services/recentlyActiveService.js\"></script> <script src=\"scripts/directives/help/helpService.js\"></script> <script src=\"scripts/directives/help/help.js\"></script> <script src=\"scripts/controllers/dialogController.js\"></script> <script src=\"scripts/directives/bottomNavigationBar/bottomNavigationBar.js\"></script> <script src=\"scripts/controllers/settings.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSetting.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSettingService.js\"></script> <script src=\"scripts/services/programconversionservice.js\"></script> <script src=\"scripts/services/adWeightService.js\"></script> <script src=\"scripts/services/adTriggerService.js\"></script> <script src=\"scripts/services/sideNavigationService.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBarService.js\"></script> <script src=\"scripts/controllers/upgrade.js\"></script> <script src=\"scripts/controllers/contact.js\"></script> <script src=\"scripts/controllers/help.js\"></script> <script src=\"scripts/directives/resetSetting/resetSetting.js\"></script> <script src=\"scripts/directives/resetSetting/resetSettingService.js\"></script> <script src=\"scripts/directives/dashboardProgramList/dashboardProgramList.js\"></script> <script src=\"scripts/directives/listEmpty/listEmpty.js\"></script> <script src=\"scripts/services/programTypeLevelService.js\"></script> <!-- endbuild --> </body> </html>"
   );
 
 
@@ -6622,8 +6999,10 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
   );
 
 
-  $templateCache.put('scripts/directives/addProgramType/addProgramTypeNameView.html',
-    "<div layout=\"column\"> <md-card> <md-card-header layout-align=\"none center\"> <md-card-header-text>Add Program Type</md-card-header-text> <help template-url=\"helpAddProgramTypeUrl\"></help> </md-card-header> <md-card-content ng-class=\"{ 'no-padding-top' : true, 'no-padding-bottom' : true }\"> <form name=\"programTypeDetailsForm\" layout=\"column\"> <md-input-container flex=\"100\" ng-class=\"{ 'no-margin-top' : true, 'margin-bottom-8' : true }\"> <label>Program Type Name</label> <input name=\"programTypeNameInput\" ng-model=\"programTypeName\" required md-no-asterisk=\"true\"> <div ng-messages=\"programTypeDetailsForm.programTypeNameInput.$error\"> <div ng-message=\"required\">A program type name is required.</div> </div> </md-input-container> </form> </md-card-content> </md-card> </div>"
+  $templateCache.put('scripts/directives/addProgramType/addProgramTypeHeaderView.html',
+    "<div layout=\"column\"> <md-card> <md-card-header layout-align=\"none center\"> <md-card-header-text>Add Program Type</md-card-header-text> <help template-url=\"helpAddProgramTypeUrl\"></help> </md-card-header> <md-card-content ng-class=\"{ 'no-padding-top' : true, 'no-padding-bottom' : true }\"> <form name=\"programTypeDetailsForm\" layout=\"column\"> <md-input-container flex=\"100\" ng-class=\"{ 'no-margin-top' : true, 'margin-bottom-8' : true }\"> <label>Program Type Name</label> <input name=\"programTypeNameInput\" ng-model=\"programTypeName\" required md-no-asterisk=\"true\"> <div ng-messages=\"programTypeDetailsForm.programTypeNameInput.$error\"> <div ng-message=\"required\">A program type name is required.</div> </div> </md-input-container> <md-input-container flex=\"100\" ng-class=\"{ 'no-margin-top' : true }\"> <label>Experience Level</label> <md-select ng-class=\"{ 'no-margin-top': true, 'padding-top-4': true }\" name=\"programTypeExperienceLevelSelect\" ng-model=\"level\" placeholder=\"Experience Level\" required md-no-asterisk=\"true\"> <md-option ng-repeat=\"experienceLevel in levels\" ng-selected=\"level.id === experienceLevel.id\" ng-value=\"experienceLevel\">{{experienceLevel.name}}</md-option> </md-select> <div ng-messages=\"programTypeExerciseForm.programTypeExerciseTypeSelect.$error\"> <div ng-message=\"required\">An exercise type is required.</div> </div> </md-input-container> <md-input-container flex=\"100\" ng-class=\"{ 'no-margin-top' : true, 'margin-bottom-8' : true }\"> <label>Description</label> <textarea name=\"programTypeDescriptionInput\" ng-model=\"description\">\r" +
+    "\n" +
+    "                </textarea></md-input-container> </form> </md-card-content> </md-card> </div>"
   );
 
 
@@ -6633,7 +7012,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('scripts/directives/addProgramType/addProgramTypeView.html',
-    "<div layout=\"column\"> <add-program-type-name program-type-name=\"programTypeName\"></add-program-type-name> <add-program-type-exercise program-type-exercises=\"exercises\"></add-program-type-exercise> <add-program-type-week program-type-weeks=\"weeks\"></add-program-type-week> <add-remove add-function=\"addFunction(programTypeName, exercises, weeks)\" remove-function=\"removeFunction()\" name=\"'Type'\" invalid-function=\"invalidFunction(programTypeName, exercises, weeks)\"></add-remove> </div>"
+    "<div layout=\"column\"> <add-program-type-header program-type-name=\"programTypeName\" level=\"level\" description=\"description\"></add-program-type-header> <add-program-type-exercise program-type-exercises=\"exercises\"></add-program-type-exercise> <add-program-type-week program-type-weeks=\"weeks\"></add-program-type-week> <add-remove add-function=\"addFunction(programTypeName, level, description, exercises, weeks)\" remove-function=\"removeFunction()\" name=\"'Type'\" invalid-function=\"invalidFunction(programTypeName, level, description, exercises, weeks)\"></add-remove> </div>"
   );
 
 
@@ -6672,6 +7051,16 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
   );
 
 
+  $templateCache.put('scripts/directives/dashboardProgramList/dashboardProgramListView.html',
+    "<div layout=\"column\" class=\"padding-left-8 padding-right-8\"> <div layout=\"column\"> <div layout=\"row\" layout-align=\"none center\"> <span class=\"padding-left-14 font-weight-700\" flex=\"grow\">Active Programs</span> <help template-url=\"helpActiveProgramListUrl\"></help> </div> <md-divider class=\"margin-top-8 padding-bottom-8\"></md-divider> </div> <program-list ng-if=\"programs && programs.length > 0\" programs=\"programs\"></program-list> <list-empty ng-if=\"!programs || programs.length <= 0\" message=\"emptyListMessage\" button-text=\"emptyListButtonText\" button-link=\"emptyListButtonList\"></list-empty> </div>"
+  );
+
+
+  $templateCache.put('scripts/directives/dashboardProgramList/helpDashboardProgramListTemplate.html',
+    "<md-dialog aria-label=\"{{ariaLabel}}\"> <form ng-cloak> <md-dialog-content> <div class=\"md-dialog-content\"> <h3>Active Program List</h3> <p>A program is considered active when it is not complete.</p> </div> </md-dialog-content> <md-dialog-actions layout=\"row\"> <md-button ng-click=\"hideDialog()\">Ok</md-button> </md-dialog-actions> </form> </md-dialog>"
+  );
+
+
   $templateCache.put('scripts/directives/help/helpView.html',
     "<div layout=\"column\"> <md-button class=\"md-icon-button\" ng-click=\"display()\" aria-label=\"help\"> <md-icon md-svg-icon=\"images/icons/help.svg\"></md-icon> </md-button> </div>"
   );
@@ -6683,7 +7072,12 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('scripts/directives/list/listView.html',
-    "<div layout=\"column\"> <span ng-if=\"values && values.length > 0\" flex> <md-list> <md-list-item class=\"md-3-line background-white margin-bottom-10\" ng-repeat=\"value in values\" ng-href=\"{{value.href}}\" md-whiteframe=\"2\"> <div class=\"padding-top-24 padding-bottom-16 padding-right-16 padding-left-16\" layout=\"row\" flex=\"100\"> <div layout=\"column\" flex> <div layout=\"column\" flex> <p class=\"list-text headline truncate-text\">{{value.text}}</p> <p class=\"list-text subhead truncate-text\">{{value.secondText}}</p> <p class=\"list-text subhead truncate-text\">{{value.thirdText}}</p> </div> </div> <div layout=\"row\" flex=\"none\" layout-align=\"center start\"> <md-button class=\"md-icon-button\" md-colors=\"{ background: 'orange-300' }\" ng-click=\"editFunction(value)\" aria-label=\"Edit\"> <md-icon md-svg-src=\"images/icons/edit.svg\"></md-icon> </md-button> <md-button ng-if=\"value.removable\" class=\"md-icon-button\" md-colors=\"{ background: 'red-300' }\" class=\"md-raised\" ng-click=\"removeFunction(value)\" aria-label=\"Remove\"> <md-icon md-svg-src=\"images/icons/remove.svg\"></md-icon> </md-button> </div> <md-progress-linear ng-if=\"value.percentage >= 0\" class=\"list-progress\" md-mode=\"determinate\" value=\"{{value.percentage}}\"></md-progress-linear> </div> </md-list-item> </md-list> </span> <div ng-if=\"!values || values.length <= 0\" layout=\"column\"> <message-card message=\"emptyMessage\" link=\"emptyLink\" button-text=\"emptyButtonText\"></message-card> </div> </div>"
+    "<div layout=\"column\"> <span ng-if=\"values && values.length > 0\" flex> <md-list> <md-list-item class=\"md-3-line background-white margin-bottom-10\" ng-repeat=\"value in values\" ng-href=\"{{value.href}}\" md-whiteframe=\"2\"> <div class=\"padding-top-24 padding-bottom-16 padding-right-16 padding-left-16\" layout=\"row\" flex=\"100\"> <div layout=\"column\" flex> <div layout=\"column\" flex> <p class=\"list-text headline truncate-text\">{{value.text}}</p> <p class=\"list-text subhead truncate-text\">{{value.secondText}}</p> <p class=\"list-text subhead truncate-text\">{{value.thirdText}}</p> </div> </div> <div layout=\"row\" flex=\"none\" layout-align=\"center start\"> <md-button ng-if=\"value.editable\" class=\"md-icon-button\" md-colors=\"{ background: 'orange-300' }\" ng-click=\"editFunction(value)\" aria-label=\"Edit\"> <md-icon md-svg-src=\"images/icons/edit.svg\"></md-icon> </md-button> <md-button ng-if=\"value.removable\" class=\"md-icon-button\" md-colors=\"{ background: 'red-300' }\" class=\"md-raised\" ng-click=\"removeFunction(value)\" aria-label=\"Remove\"> <md-icon md-svg-src=\"images/icons/remove.svg\"></md-icon> </md-button> </div> <md-progress-linear ng-if=\"value.percentage >= 0\" class=\"list-progress\" md-mode=\"determinate\" value=\"{{value.percentage}}\"></md-progress-linear> </div> </md-list-item> </md-list> </span> </div>"
+  );
+
+
+  $templateCache.put('scripts/directives/listEmpty/listEmptyView.html',
+    "<div layout=\"column\"> <md-card md-colors=\"{ background: 'orange-500'}\"> <md-card-content> <div layout=\"column\"> <div ng-if=\"message\" class=\"padding-bottom-8\" layout=\"column\" layout-align=\"center center\"> <span class=\"font-weight-700\">{{message}}</span> </div> <div ng-if=\"buttonText && buttonLink\" layout=\"column\" layout-align=\"center center\"> <md-button md-colors=\"{ background: 'primary-50' }\" class=\"md-raised\" ng-href=\"{{buttonLink}}\"> {{buttonText}} </md-button> </div> </div> </md-card-content> </md-card> </div>"
   );
 
 
@@ -6693,17 +7087,17 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('scripts/directives/navigationBar/navigationBarView.html',
-    "<div layout=\"row\"> <md-toolbar class=\"md-hue-2\"> <div class=\"md-toolbar-tools\"> <a class=\"icon-width\" ng-href=\"#/\" aria-label=\"dashboard\"> <div class=\"navbar-height\" layout=\"column\" layout-align=\"center center\"> <div> <md-icon md-svg-icon=\"images/icons/dashboard.svg\"></md-icon> </div> <div> <span class=\"icon-text truncate-text\">Dashboard</span> </div> </div> </a> <span flex></span> <h2 class=\"title-text\">POWER HOUSE</h2> <span flex></span> <a class=\"icon-width\" ng-href=\"#/settings\" aria-label=\"settings\"> <div class=\"navbar-height\" layout=\"column\" layout-align=\"center center\"> <div> <md-icon md-svg-icon=\"images/icons/settings.svg\"></md-icon> </div> <div> <span class=\"icon-text truncate-text\">Settings</span> </div> </div> </a> </div> </md-toolbar> </div>"
+    "<div layout=\"row\"> <md-toolbar class=\"md-hue-2\"> <div class=\"md-toolbar-tools\"> <a class=\"icon-width\" ng-click=\"toggleSidenav()\" aria-label=\"Sidenav Menu\"> <div class=\"navbar-height\" layout=\"column\" layout-align=\"center center\"> <div> <md-icon md-svg-icon=\"images/icons/menu.svg\"></md-icon> </div> <div> <span class=\"icon-text truncate-text\">Menu</span> </div> </div> </a> <span flex></span> <h2 class=\"title-text\">POWER HOUSE</h2> <span flex></span> <a class=\"icon-width\" ng-href=\"#/\" aria-label=\"dashboard\"> <div class=\"navbar-height\" layout=\"column\" layout-align=\"center center\"> <div> <md-icon md-svg-icon=\"images/icons/dashboard.svg\"></md-icon> </div> <div> <span class=\"icon-text truncate-text\">Dashboard</span> </div> </div> </a> </div> </md-toolbar> <md-sidenav md-colors=\"{ 'background': 'primary-50' }\" md-component-id=\"sidenav\" class=\"md-sidenav-left\" md-disable-scroll-target md-whiteframe=\"4\"> <md-content md-colors=\"{ 'background': 'primary-50' }\" layout-padding> <md-list> <md-list-item ng-repeat=\"menuItems in sideMenuItems\" ng-click=\"toggleSidenav()\" ng-href=\"{{menuItems.href}}\"> <div layout=\"row\" layout-align=\"center center\" flex> <md-icon class=\"margin-right-16\" md-svg-icon=\"{{menuItems.icon}}\" flex=\"nogrow\"></md-icon> <h3 flex=\"grow\">{{menuItems.text}}</h3> </div> </md-list-item> </md-list> </md-content> </md-sidenav> </div>"
   );
 
 
   $templateCache.put('scripts/directives/programList/programListView.html',
-    "<div layout=\"column\"> <list edit-function=\"editFunction\" remove-function=\"removeFunction\" values=\"programs\" empty-message=\"emptyMessage\" empty-link=\"emptyLink\" empty-button-text=\"emptyButtonText\"></list> </div>"
+    "<div layout=\"column\"> <list edit-function=\"editFunction\" remove-function=\"removeFunction\" values=\"formattedPrograms\"></list> </div>"
   );
 
 
   $templateCache.put('scripts/directives/programTypeList/ProgramTypeListView.html',
-    "<div layout=\"column\"> <list edit-function=\"editFunction\" remove-function=\"removeFunction\" values=\"programTypes\" empty-message=\"emptyMessage\" empty-link=\"emptyLink\" empty-button-text=\"emptyButtonText\"></list> </div>"
+    "<div layout=\"column\"> <list edit-function=\"editFunction\" remove-function=\"removeFunction\" values=\"formattedProgramTypes\"></list> </div>"
   );
 
 
@@ -6713,7 +7107,17 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('scripts/directives/quickComplete/quickCompleteView.html',
-    "<div layout=\"column\"> <md-card class=\"quickcomplete\" ng-if=\"defined()\"> <md-card-header class=\"no-padding-right\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header-text layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <span class=\"font-weight-600\">{{quickCompleteProgram.name}}</span> <span flex=\"nogrow\">{{week.name}} | {{day.name}}</span> </div> </md-card-header-text> <help template-url=\"helpTemplateUrl\"></help> </md-card-header> <md-card-content> <div layout=\"row\"> <div layout=\"column\" flex=\"grow\"> <span class=\"margin-bottom-8 font-weight-600\">{{exercise}}</span> <span>{{setInformation}}</span> </div> <div layout=\"column\" layout-align=\"center center\" flex=\"nogrow\"> <md-checkbox class=\"no-margin\" ng-model=\"set.complete\" ng-change=\"calculatePercentageComplete()\" aria-label=\"complete set\" flex=\"nogrow\"></md-checkbox> </div> </div> </md-card-content> <md-progress-linear ng-if=\"quickCompleteProgram.percentComplete >= 0\" md-mode=\"determinate\" value=\"{{quickCompleteProgram.percentComplete}}\"></md-progress-linear> </md-card> <md-card class=\"quickcomplete\" ng-if=\"!defined()\"> <md-card-header class=\"no-padding-right\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header-text layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <span class=\"font-weight-600\">No most recent program</span> </div> </md-card-header-text> <help template-url=\"helpTemplateUrl\"></help> </md-card-header> <md-card-content> <div layout=\"column\" layout-align=\"none center\"> <md-button class=\"md-raised\" md-colors=\"{ background: 'orange-700', color: 'grey-900' }\" ng-click=\"buttonClicked()\">{{buttonText}}</md-button> </div> </md-card-content> </md-card> </div>"
+    "<div layout=\"column\"> <md-card class=\"quickcomplete\" ng-if=\"defined()\"> <md-card-header class=\"no-padding-right\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header-text layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <span class=\"font-weight-600\">{{quickCompleteProgram.name}}</span> <span flex=\"nogrow\">{{week.name}} | {{day.name}}</span> </div> </md-card-header-text> <help template-url=\"helpTemplateUrl\"></help> </md-card-header> <md-card-content> <div layout=\"row\"> <div layout=\"column\" flex=\"grow\"> <span class=\"margin-bottom-8 font-weight-600\">{{exercise}}</span> <span>{{setInformation}}</span> </div> <div layout=\"column\" layout-align=\"center center\" flex=\"nogrow\"> <md-checkbox class=\"no-margin\" ng-model=\"set.complete\" ng-change=\"calculatePercentageComplete()\" aria-label=\"complete set\" flex=\"nogrow\"></md-checkbox> </div> </div> </md-card-content> <md-progress-linear ng-if=\"quickCompleteProgram.percentComplete >= 0\" md-mode=\"determinate\" value=\"{{quickCompleteProgram.percentComplete}}\"></md-progress-linear> </md-card> <md-card class=\"quickcomplete\" ng-if=\"!defined()\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header class=\"no-padding-right\"> <md-card-header-text layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <span class=\"font-weight-600\">No most recent program</span> </div> </md-card-header-text> <help template-url=\"helpTemplateUrl\"></help> </md-card-header> </md-card> </div>"
+  );
+
+
+  $templateCache.put('scripts/directives/resetSetting/helpResetSetting.html',
+    "<md-dialog aria-label=\"{{ariaLabel}}\"> <form ng-cloak> <md-dialog-content> <div class=\"md-dialog-content\"> <h3>Reset</h3> <p>This will reset the application back to it's default state.</p> <p class=\"font-weight-700\">This means that:</p> <p>- All programs will be removed</p> <p>- All custom program types will be removed</p> <p>- Custom setting will be restored</p> </div> </md-dialog-content> <md-dialog-actions layout=\"row\"> <md-button ng-click=\"hideDialog()\">Ok</md-button> </md-dialog-actions> </form> </md-dialog>"
+  );
+
+
+  $templateCache.put('scripts/directives/resetSetting/resetSettingView.html',
+    "<div layout=\"column\"> <div layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <md-button class=\"md-raised md-warn\" ng-click=\"resetClicked()\">Reset All</md-button> </div> <help template-url=\"helpResetSetting\" flex=\"nogrow\"></help> </div> </div>"
   );
 
 
@@ -6728,12 +7132,17 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('views/addProgramType.html',
-    "<div layout=\"column\" layout-padding> <add-program-type program-type-name=\"programTypeName\" exercises=\"exercises\" weeks=\"weeks\" add-function=\"addFunction\" remove-function=\"removeFunction\" invalid-function=\"invalidFunction\"></add-program-type> </div>"
+    "<div layout=\"column\" layout-padding> <add-program-type program-type-name=\"programTypeName\" level=\"level\" description=\"description\" exercises=\"exercises\" weeks=\"weeks\" add-function=\"addFunction\" remove-function=\"removeFunction\" invalid-function=\"invalidFunction\"></add-program-type> </div>"
+  );
+
+
+  $templateCache.put('views/contact.html',
+    "<div layout=\"column\" layout-padding> <div layout=\"column\" layout-align=\"none center\"> <h3>Contact comming soon.</h3> </div> </div>"
   );
 
 
   $templateCache.put('views/dashboard.html',
-    "<div layout=\"column\" layout-padding> <div layout=\"row\"> <div flex=\"50\"> <highlight-card header-text=\"completedHeaderText\" highlight-text=\"completedHighlightText\" highlight-color=\"completedHighlightColor\" subhead-text=\"completeSubheadText\"></highlight-card> </div> <div flex=\"50\"> <highlight-card header-text=\"activeHeaderText\" highlight-text=\"activeHighlightText\" highlight-color=\"activeHighlightColor\" subhead-text=\"activeSubheadText\"></highlight-card> </div> </div> <div layout=\"column\" flex> <quick-complete quick-complete-program=\"quickCompleteProgram\"></quick-complete> </div> </div>"
+    "<div layout=\"column\" layout-padding> <div layout=\"row\"> <div flex=\"50\"> <highlight-card header-text=\"completedHeaderText\" highlight-text=\"completedHighlightText\" highlight-color=\"completedHighlightColor\" subhead-text=\"completeSubheadText\"></highlight-card> </div> <div flex=\"50\"> <highlight-card header-text=\"activeHeaderText\" highlight-text=\"activeHighlightText\" highlight-color=\"activeHighlightColor\" subhead-text=\"activeSubheadText\"></highlight-card> </div> </div> <div layout=\"column\" flex> <quick-complete quick-complete-program=\"quickCompleteProgram\"></quick-complete> </div> <div layout=\"column\" flex> <dashboard-program-list programs=\"programs\"></dashboard-program-list> </div> </div>"
   );
 
 
@@ -6743,7 +7152,12 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('views/editProgramType.html',
-    "<div layout=\"column\" layout-padding> <add-program-type program-type-name=\"programTypeName\" exercises=\"exercises\" weeks=\"weeks\" add-function=\"addFunction\" remove-function=\"removeFunction\" invalid-function=\"invalidFunction\"></add-program-type> </div>"
+    "<div layout=\"column\" layout-padding> <add-program-type program-type-name=\"programTypeName\" level=\"level\" description=\"description\" exercises=\"exercises\" weeks=\"weeks\" add-function=\"addFunction\" remove-function=\"removeFunction\" invalid-function=\"invalidFunction\"></add-program-type> </div>"
+  );
+
+
+  $templateCache.put('views/help.html',
+    "<div layout=\"column\" layout-padding> <div layout=\"column\" layout-align=\"none center\"> <h3>Help comming soon.</h3> </div> </div>"
   );
 
 
@@ -6753,22 +7167,27 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('views/programList.html',
-    "<div layout=\"column\" layout-padding> <program-list remove-function=\"removeFunction\" edit-function=\"editFunction\"></program-list> </div>"
+    "<div layout=\"column\" layout-padding> <program-list ng-if=\"programs && programs.length > 0\" programs=\"programs\" remove-function=\"removeFunction\" edit-function=\"editFunction\"></program-list> <list-empty ng-if=\"!programs || programs.length <= 0\" message=\"emptyListMessage\" button-text=\"emptyListButtonText\" button-link=\"emptyListButtonLink\"></list-empty> </div>"
   );
 
 
   $templateCache.put('views/programTypeInformation.html',
-    "<div layout=\"column\" layout-padding> <div layout=\"column\"> <span ng-if=\"programType !== undefined\" flex> <!-- HEADER --> <md-list> <md-list-item class=\"md-3-line background-white margin-bottom-10 no-padding-left no-padding-right\" md-whiteframe=\"2\"> <div class=\"padding-top-24 padding-bottom-16 padding-right-16 padding-left-16\" layout=\"row\" flex=\"100\"> <div layout=\"column\" flex> <div layout=\"column\" flex> <p class=\"list-text headline truncate-text\">{{programType.programTypeName}}</p> <p class=\"list-text subhead truncate-text\">Total Weeks: {{programType.weeks.length}}</p> <p class=\"list-text subhead truncate-text\">Total Sets: {{programType.totalNumberOfSets}}</p> </div> </div> <div layout=\"row\" flex=\"none\" layout-align=\"center start\"> <md-button class=\"md-icon-button\" md-colors=\"{ background: 'orange-300' }\" ng-click=\"editFunction(programType)\" aria-label=\"Edit\"> <md-icon md-svg-src=\"images/icons/edit.svg\"></md-icon> </md-button> <md-button ng-if=\"programType.removable\" class=\"md-icon-button\" md-colors=\"{ background: 'red-300' }\" class=\"md-raised\" ng-click=\"removeFunction(programType)\" aria-label=\"Remove\"> <md-icon md-svg-src=\"images/icons/remove.svg\"></md-icon> </md-button> </div> </div> </md-list-item> </md-list> <!-- BODY --> <md-expansion-panel-group> <md-expansion-panel> <md-expansion-panel-collapsed> <div class=\"md-title\">Exercises</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-collapsed> <md-expansion-panel-expanded> <md-expansion-panel-header ng-click=\"$panel.collapse()\"> <div class=\"md-title\">Exercises</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-header> <md-expansion-panel-content> <md-list ng-class=\"{ 'no-padding-top': true, 'no-padding-bottom': true }\" ng-repeat=\"exercise in programType.exercises\" flex> <md-list-item class=\"md-2-line\" flex> <div class=\"md-list-item-text\" flex> <h3 flex>{{exercise.name}}</h3> <p>Type: {{exercise.exerciseType.name}}</p> </div> </md-list-item> <md-divider ng-if=\"!$last\"></md-divider> </md-list> </md-expansion-panel-content> </md-expansion-panel-expanded> </md-expansion-panel> <md-expansion-panel ng-repeat=\"week in programType.weeks\"> <md-expansion-panel-collapsed> <div class=\"md-title\">{{week.name}}</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-collapsed> <md-expansion-panel-expanded> <md-expansion-panel-header ng-click=\"$panel.collapse()\"> <div class=\"md-title\">{{week.name}}</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-header> <md-expansion-panel-content> <md-list ng-repeat=\"day in week.days\" flex> <p class=\"no-margin-top\">{{day.name}}</p> <md-divider></md-divider> <md-list-item class=\"md-3-line\" ng-repeat=\"set in day.sets\" flex> <div ng-if=\"set.exercise.exerciseType.id === 0\" class=\"md-list-item-text\" flex> <h3 flex>{{set.exercise.name}}</h3> <p>{{set.numberOfSets}} sets by {{set.numberOfReps}} reps at {{set.oneRepMaxPercent}}% ORM</p> <p>Increment Multiplier: {{set.incrementMultiplier}}</p> </div> <div ng-if=\"set.exercise.exerciseType.id === 1\" class=\"md-list-item-text\"> <h3 flex>{{set.exercise.name}}</h3> <p>{{set.numberOfSets}} sets by {{set.numberOfReps}} reps</p> </div> <div ng-if=\"set.exercise.exerciseType.id === 2\" class=\"md-list-item-text\"> <h3 flex>{{set.exercise.name}}</h3> <p>Duration: {{set.duration}}</p> </div> </md-list-item> </md-list> </md-expansion-panel-content> </md-expansion-panel-expanded> </md-expansion-panel> </md-expansion-panel-group> </span> </div> </div>"
+    "<div layout=\"column\" layout-padding> <div layout=\"column\"> <span ng-if=\"programType !== undefined\" flex> <!-- HEADER --> <md-list> <md-list-item class=\"md-3-line background-white margin-bottom-10 no-padding-left no-padding-right\" md-whiteframe=\"2\"> <div class=\"padding-top-24 padding-bottom-16 padding-right-16 padding-left-16\" layout=\"row\" flex=\"100\"> <div layout=\"column\" flex> <div layout=\"column\" flex> <p class=\"list-text headline truncate-text\">{{programType.programTypeName}}</p> <p ng-if=\"programType.level\" class=\"list-text subhead truncate-text\">Experience Level: {{programType.level.name}}</p> <p class=\"list-text subhead truncate-text\">Total Weeks: {{programType.weeks.length}}, Total Sets: {{programType.totalNumberOfSets}}</p> </div> </div> <div layout=\"row\" flex=\"none\" layout-align=\"center start\"> <md-button class=\"md-icon-button\" md-colors=\"{ background: 'orange-300' }\" ng-click=\"editFunction(programType)\" aria-label=\"Edit\"> <md-icon md-svg-src=\"images/icons/edit.svg\"></md-icon> </md-button> <md-button ng-if=\"programType.removable\" class=\"md-icon-button\" md-colors=\"{ background: 'red-300' }\" class=\"md-raised\" ng-click=\"removeFunction(programType)\" aria-label=\"Remove\"> <md-icon md-svg-src=\"images/icons/remove.svg\"></md-icon> </md-button> </div> </div> </md-list-item> </md-list> <!-- BODY --> <md-expansion-panel-group> <!-- Description --> <md-expansion-panel ng-if=\"programType.description && programType.description.length > 0\"> <md-expansion-panel-collapsed> <div class=\"md-title\">Description</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-collapsed> <md-expansion-panel-expanded> <md-expansion-panel-header ng-click=\"$panel.collapse()\"> <div class=\"md-title\">Description</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-header> <md-expansion-panel-content> <p>{{programType.description}}</p> </md-expansion-panel-content> </md-expansion-panel-expanded> </md-expansion-panel> <!-- Exercises --> <md-expansion-panel> <md-expansion-panel-collapsed> <div class=\"md-title\">Exercises</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-collapsed> <md-expansion-panel-expanded> <md-expansion-panel-header ng-click=\"$panel.collapse()\"> <div class=\"md-title\">Exercises</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-header> <md-expansion-panel-content> <md-list ng-class=\"{ 'no-padding-top': true, 'no-padding-bottom': true }\" ng-repeat=\"exercise in programType.exercises\" flex> <md-list-item class=\"md-2-line\" flex> <div class=\"md-list-item-text\" flex> <h3 flex>{{exercise.name}}</h3> <p>Type: {{exercise.exerciseType.name}}</p> </div> </md-list-item> <md-divider ng-if=\"!$last\"></md-divider> </md-list> </md-expansion-panel-content> </md-expansion-panel-expanded> </md-expansion-panel> <!-- Weeks --> <md-expansion-panel ng-repeat=\"week in programType.weeks\"> <md-expansion-panel-collapsed> <div class=\"md-title\">{{week.name}}</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-collapsed> <md-expansion-panel-expanded> <md-expansion-panel-header ng-click=\"$panel.collapse()\"> <div class=\"md-title\">{{week.name}}</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-header> <md-expansion-panel-content> <md-list ng-repeat=\"day in week.days\" flex> <p class=\"no-margin-top\">{{day.name}}</p> <md-divider></md-divider> <md-list-item class=\"md-3-line\" ng-repeat=\"set in day.sets\" flex> <div ng-if=\"set.exercise.exerciseType.id === 0\" class=\"md-list-item-text\" flex> <h3 flex>{{set.exercise.name}}</h3> <p>{{set.numberOfSets}} sets by {{set.numberOfReps}} reps at {{set.oneRepMaxPercent}}% ORM</p> <p>Increment Multiplier: {{set.incrementMultiplier}}</p> </div> <div ng-if=\"set.exercise.exerciseType.id === 1\" class=\"md-list-item-text\"> <h3 flex>{{set.exercise.name}}</h3> <p>{{set.numberOfSets}} sets by {{set.numberOfReps}} reps</p> </div> <div ng-if=\"set.exercise.exerciseType.id === 2\" class=\"md-list-item-text\"> <h3 flex>{{set.exercise.name}}</h3> <p>Duration: {{set.duration}}</p> </div> </md-list-item> </md-list> </md-expansion-panel-content> </md-expansion-panel-expanded> </md-expansion-panel> </md-expansion-panel-group> </span> </div> </div>"
   );
 
 
   $templateCache.put('views/programTypeList.html',
-    "<div layout=\"column\" layout-padding> <program-type-list></program-type-list> </div>"
+    "<div layout=\"column\" layout-padding> <program-type-list program-types=\"programTypes\"></program-type-list> </div>"
   );
 
 
   $templateCache.put('views/settings.html',
-    "<div layout=\"column\" layout-padding> <div layout=\"column\"> <md-card> <md-card-header class=\"no-padding-right\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header-text layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <span class=\"font-weight-600\">Settings</span> </div> </md-card-header-text> </md-card-header> <md-card-content> <weight-unit-setting></weight-unit-setting> </md-card-content> </md-card> </div> </div>"
+    "<div layout=\"column\" layout-padding> <div layout=\"column\"> <md-card> <md-card-header class=\"no-padding-right\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header-text layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <span class=\"font-weight-600\">Settings</span> </div> </md-card-header-text> </md-card-header> <md-card-content> <weight-unit-setting></weight-unit-setting> <reset-setting></reset-setting> </md-card-content> </md-card> </div> </div>"
+  );
+
+
+  $templateCache.put('views/upgrade.html',
+    "<div layout=\"column\" layout-padding> <div layout=\"column\" layout-align=\"none center\"> <h3>Upgrade comming soon.</h3> </div> </div>"
   );
 
 }]);
