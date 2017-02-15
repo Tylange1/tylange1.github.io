@@ -243,8 +243,9 @@ angular.module('powerHouseApp')
  * Controller of the powerHouseApp
  */
 angular.module('powerHouseApp')
-  .controller('programListCtrl', ['$scope', '$filter', 'programService', function ($scope, $filter, programService) {
+  .controller('programListCtrl', ['$scope', '$filter', 'programService', 'programListService', function ($scope, $filter, programService, programListService) {
     $scope.originalPrograms = programService.getPrograms();
+    $scope.filteredPrograms = $scope.originalPrograms;
     $scope.programs = $scope.originalPrograms;
 
     // Empty list
@@ -252,15 +253,11 @@ angular.module('powerHouseApp')
     $scope.emptyListButtonText = 'Add Program';
     $scope.emptyListButtonLink = '#/add-program';
 
-    $scope.filterValue = '';
+    $scope.filterProperty = 'name';
 
-    $scope.$watch(function(){
-      return $scope.filterValue;
-    }, function(newValue, oldValue){
-      if(newValue !== oldValue){
-        $scope.programs = $filter('filter')($scope.originalPrograms, { name: newValue });
-      }
-    });
+    $scope.orderValues = programListService.getOrderValues();
+    $scope.orderKey = programListService.orderKey;
+    $scope.reverseKey = programListService.reverseKey;
 
     $scope.$watchCollection(function(){
       return programService.getPrograms();
@@ -332,8 +329,8 @@ angular.module('powerHouseApp')
     $scope.exercises = [];
     $scope.weeks = [];
 
-    $scope.addFunction = function(programTypeName, exercises, weeks){
-      addProgramTypeService.addProgramType(programTypeName, exercises, weeks);
+    $scope.addFunction = function(programTypeName, level, description, exercises, weeks){
+      addProgramTypeService.addProgramType(programTypeName, level, description, exercises, weeks);
       $location.path('program-type-list');
     };
 
@@ -381,8 +378,9 @@ angular.module('powerHouseApp')
  * Controller of the powerHouseApp
  */
 angular.module('powerHouseApp')
-  .controller('ProgramTypeListCtrl', ['$scope', '$filter', 'programTypeService', function ($scope, $filter, programTypeService) {
+  .controller('ProgramTypeListCtrl', ['$scope', '$filter', 'programTypeService', 'programTypeListService', function ($scope, $filter, programTypeService, programTypeListService) {
     $scope.originalProgramTypes = programTypeService.getProgramTypes();
+    $scope.filteredProgramTypes = $scope.originalProgramTypes;
     $scope.programTypes = $scope.originalProgramTypes;
 
     // Empty list
@@ -390,7 +388,11 @@ angular.module('powerHouseApp')
     $scope.emptyListButtonText = 'Add Program Type';
     $scope.emptyListButtonLink = '#/add-program-type';
 
-    $scope.filterValue = '';
+    $scope.filterProperty = 'programTypeName';
+
+    $scope.orderValues = programTypeListService.getOrderValues();
+    $scope.orderKey = programTypeListService.orderKey;
+    $scope.reverseKey = programTypeListService.reverseKey;
 
     $scope.$watch(function(){
       return $scope.filterValue;
@@ -437,10 +439,7 @@ angular.module('powerHouseApp')
     };
 
     contract.addProgramType = function(programTypeName, level, description, exercises, weeks){
-      var programType = generateProgramType(programTypeName, level, description, exercises, weeks);
-      contract.programTypes.push(programType);
-      // console.log(angular.toJson(programType));
-      // contract.programTypes.push(generateProgramType(programTypeName, exercises, weeks));
+      contract.programTypes.push(generateProgramType(programTypeName, level, description, exercises, weeks));
       storeProgramTypes();
     };
 
@@ -1435,6 +1434,10 @@ angular.module('powerHouseApp')
       return dValue;    
     };
 
+    contract.reset = function(){
+      localStorageService.clearAll();
+    };
+
     return contract;
   }]);
 
@@ -1455,7 +1458,11 @@ angular.module('powerHouseApp')
       programType: 'PROGRAM_TYPE',
       program: 'PROGRAM',
       recentlyActive: 'RECENTLY_ACTIVE',
-      unit: 'WEIGHT_UNIT'
+      unit: 'WEIGHT_UNIT',
+      programListOrderKey: 'PROGRAM_LIST_ORDER_KEY',
+      programListReversedKey: 'PROGRAM_LIST_REVERSED_KEY',
+      programTypeListOrderKey: 'PROGRAM_TYPE_LIST_ORDER_KEY',
+      programTypeListReversedKey: 'PROGRAM_TYPE_LIST_REVERSED_KEY',
     };
 
     return contract;
@@ -1533,8 +1540,58 @@ angular.module('powerHouseApp')
  * Service in the powerHouseApp.
  */
 angular.module('powerHouseApp')
-  .service('programTypeListService', [function () {
-    var contract = {};
+  .service('programTypeListService', ['keyHandlerService', 'orderListService', function (keyHandlerService, orderListService) {
+    var contract = {
+      orderKey: keyHandlerService.keys.programTypeListOrderKey,
+      reverseKey: keyHandlerService.keys.programTypeListReversedKey,
+      orderValues: [
+        {
+          prop: 'programTypeName',
+          text: 'Name'
+        },
+        {
+          prop: 'level',
+          text: 'Experience Level',
+          comparator: function(v1, v2){
+            var rValue = 0;
+            if(v1.value.id < v2.value.id){
+              rValue = -1;
+            }
+            else if(v1.value.id > v2.value.id){
+              rValue = 1;
+            }
+            return rValue;
+          }
+        },
+        {
+          prop: 'default',
+          text: 'Default'
+        },
+        {
+          prop: 'totalNumberOfSets',
+          text: 'Number of Sets',
+
+        },
+        {
+          prop: 'weeks',
+          text: 'Number of Weeks',
+          comparator: function(v1, v2){
+            var rValue = 0;
+            if(v1.value.length < v2.value.length){
+              rValue = -1;
+            }
+            else if(v1.value.length > v2.value.length){
+              rValue = 1;
+            }
+            return rValue;
+          }
+        },
+      ]
+    };
+
+    contract.getOrderValues = function(){
+      return orderListService.getOrderByValues(contract.orderValues);
+    };
 
     contract.formatProgramTypes = function(programTypes){
       return programTypes.map(function(programType){
@@ -2059,30 +2116,56 @@ angular.module('powerHouseApp')
  * Service in the powerHouseApp.
  */
 angular.module('powerHouseApp')
-  .service('programListService', ['unitService', function (unitService) {
-    var contract = {};
+  .service('programListService', ['unitService', 'keyHandlerService', 'orderListService', function (unitService, keyHandlerService, orderListService) {
+    var contract = {
+      orderKey: keyHandlerService.keys.programListOrderKey,
+      reverseKey: keyHandlerService.keys.programListReversedKey,
+      orderValues: [
+        {
+          prop: 'name',
+          text: 'Name'
+        },
+        {
+          prop: 'complete',
+          text: 'Complete'
+        },
+        {
+          prop: 'increment',
+          text: 'Increment'
+        },
+        {
+          prop: 'percentComplete',
+          text: 'Percent Complete'
+        },
+        {
+          prop: 'programType',
+          text: 'Experience Level',
+          comparator: function(v1, v2){
+            if(v1.type === 'object' && v2.type === 'object'){
+              var rValue = 0;
+              
+              if(v1.value.level.id < v2.value.level.id){
+                rValue = -1;
+              }
+              else if(v1.value.level.id > v2.value.level.id){
+                rValue = 1;
+              }
+
+              return rValue;
+            }
+          }
+        },
+      ]
+    };
+
+    contract.getOrderValues = function(){
+      return orderListService.getOrderByValues(contract.orderValues);
+    };
 
     contract.formatPrograms = function(programs){
       return programs.map(function(program){
         return formatProgram(program);
       });
-    };
-
-    contract.getFilters = function(){
-      return [
-        {
-          prop: 'name',
-          name: 'Name'
-        },
-        {
-          prop: 'name',
-          name: 'Name'
-        },
-        {
-          prop: 'name',
-          name: 'Name'
-        },
-      ];
     };
 
     var formatProgram = function(program){
@@ -6860,7 +6943,7 @@ angular.module('powerHouseApp')
  * Service in the powerHouseApp.
  */
 angular.module('powerHouseApp')
-  .service('resetSettingService', ['$mdDialog', 'programService', 'programTypeService', 'recentlyActiveService', 'unitService', function ($mdDialog, programService, programTypeService, recentlyActiveService, unitService) {
+  .service('resetSettingService', ['$mdDialog', 'programService', 'programTypeService', 'recentlyActiveService', 'unitService', 'storageService', function ($mdDialog, programService, programTypeService, recentlyActiveService, unitService, storageService) {
     var contract = {
       helpResetSetting: 'scripts/directives/resetSetting/helpResetSetting.html'
     };
@@ -6884,6 +6967,7 @@ angular.module('powerHouseApp')
       programTypeService.reset();
       recentlyActiveService.reset();
       unitService.reset();
+      storageService.reset();
     };
 
     return contract;
@@ -6986,21 +7070,196 @@ angular.module('powerHouseApp')
  * # listFilter
  */
 angular.module('powerHouseApp')
-  .directive('listFilter', function () {
+  .directive('listFilter', ['listFilterService', function (listFilterService) {
     return {
       templateUrl: 'scripts/directives/listFilter/listFilterView.html',
       restrict: 'E',
       scope: {
-        filterValue: '=',
+        values: '=',
+        originalValues: '=',
+        property: '='
       },
       link: function postLink(scope) {
+
+        scope.filterValue = '';
+
+        scope.$watch(function(){
+          return scope.filterValue;
+        }, function(newValue, oldValue){
+          if(newValue !== oldValue){
+            scope.values = listFilterService.filter(scope.originalValues, scope.filterValue, scope.property);
+          }
+        })
 
         scope.clear = function(){
           scope.filterValue = '';
         }
       }
     };
-  });
+  }]);
+
+'use strict';
+
+/**
+ * @ngdoc directive
+ * @name powerHouseApp.directive:orderList
+ * @description
+ * # orderList
+ */
+angular.module('powerHouseApp')
+  .directive('orderList', ['utilService', 'orderListService', function (utilService, orderListService) {
+    return {
+      templateUrl: 'scripts/directives/orderList/orderListView.html',
+      restrict: 'E',
+      scope: {
+        key: '=',
+        reverseKey: '=',
+        orderValues: '=',
+        originalValues: '=',
+        values: '='
+      },
+      link: function postLink(scope, element, attrs) {
+        // Get default / persisted values
+        scope.reversed = orderListService.getReversedValue(scope.reverseKey);
+        scope.selectedOrder = orderListService.getOrderValue(scope.key);
+        scope.lastSelected = scope.selectedOrder;
+
+        // If orderChanges
+        scope.$watch(function(){
+          return scope.selectedOrder;
+        }, function(newValue, oldValue){
+          // Check that we have a change
+          if(newValue !== oldValue){
+            // Check that the selectedOrder is different to the stored one 
+            if(scope.selectedOrder.text !== orderListService.getOrderValue(scope.key).text){
+              orderListService.orderValueChanged(scope.key, scope.selectedOrder);
+              scope.reversed = false;
+              scope.values = orderListService.orderBy(scope.selectedOrder, scope.originalValues, scope.reversed)
+              scope.lastSelected = scope.selectedOrder;
+            }
+            else if(scope.selectedOrder.text === orderListService.getOrderValue(scope.key).text){
+              // sort the values
+              scope.values = orderListService.orderBy(scope.selectedOrder, scope.originalValues, scope.reversed)
+            }
+          }
+        });
+
+        scope.$watch(function(){
+          return scope.reversed;
+        }, function(newValue, oldValue){
+          if(newValue !== oldValue){
+            if(scope.reversed !== orderListService.getReversedValue(scope.reverseKey)){
+              orderListService.orderValueReverseChanged(scope.reverseKey, scope.reversed);
+            }
+          }
+        });
+
+        scope.reverse = function(selectedOrder){
+          scope.reversed = !scope.reversed;
+          scope.values = orderListService.orderBy(scope.selectedOrder, scope.originalValues, scope.reversed)
+        };
+
+        scope.$watch(function(){
+          return scope.originalValues;
+        }, function(newValue, oldValue){
+          if(newValue !== oldValue){
+            scope.values = orderListService.orderBy(scope.selectedOrder, scope.originalValues, scope.reversed)
+          }
+        });
+      }
+    };
+  }]);
+
+'use strict';
+
+/**
+ * @ngdoc service
+ * @name powerHouseApp.orderListService
+ * @description
+ * # orderListService
+ * Service in the powerHouseApp.
+ */
+angular.module('powerHouseApp')
+  .service('orderListService', ['$filter', 'utilService', 'storageService', function ($filter, utilService, storageService) {
+    var contract = {
+      defaultValue: {
+        prop: 'id',
+        text: 'None'
+      }
+    };
+
+    contract.getOrderByValues = function(values){
+      return [contract.defaultValue].concat(values);
+    };
+
+    contract.getOrderValue = function(key){
+      return getOrderValueFromStorage(key);
+    };
+
+    contract.getReversedValue = function(key){
+      return getReversedFromStorage(key);
+    };
+
+    contract.orderBy = function(selectedOrder, values, reverse){
+      if(utilService.isDefined(selectedOrder.comparator)){
+        return $filter('orderBy')(values, selectedOrder.prop, reverse, selectedOrder.comparator);  
+      }
+      return $filter('orderBy')(values, selectedOrder.prop, reverse);
+    };
+
+    contract.orderValueChanged = function(key, value){
+      storeOrderValue(key, value);
+    };
+
+    contract.orderValueReverseChanged = function(key, value){
+      storeReversedValue(key, value);
+    };
+
+    var getOrderValueFromStorage = function(key){
+      return storageService.getValueOrDefault(key, contract.defaultValue);
+    };
+
+
+    var getReversedFromStorage = function(key){
+      return storageService.getValueOrDefault(key, false);
+    };
+
+    var storeOrderValue = function(key, value){
+      storageService.storeValue(key, value);
+    };
+
+    var storeReversedValue = function(key, value){
+      storageService.storeValue(key, value);
+    };
+
+    return contract;
+  }]);
+
+'use strict';
+
+/**
+ * @ngdoc service
+ * @name powerHouseApp.listFilterService
+ * @description
+ * # listFilterService
+ * Service in the powerHouseApp.
+ */
+angular.module('powerHouseApp')
+  .service('listFilterService', ['$filter', function ($filter) {
+    var contract = {};
+
+    contract.filter = function(originalValues, filterValue, property){
+      return $filter('filter')(originalValues, combinedPropertyAndFilterValue(filterValue, property));
+    };
+
+    var combinedPropertyAndFilterValue = function(filterValue, property){
+      var rObject = {};
+      rObject[property] = filterValue;
+      return rObject;
+    };
+
+    return contract;
+  }]);
 
 angular.module('powerHouseApp').run(['$templateCache', function($templateCache) {
   'use strict';
@@ -7022,7 +7281,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
     "\n" +
     "       ga('create', 'UA-XXXXX-X');\r" +
     "\n" +
-    "       ga('send', 'pageview');</script> <!-- build:js(.) scripts/vendor.js --> <!-- bower:js --> <script src=\"bower_components/angular/angular.js\"></script> <script src=\"bower_components/angular-animate/angular-animate.js\"></script> <script src=\"bower_components/angular-aria/angular-aria.js\"></script> <script src=\"bower_components/angular-cookies/angular-cookies.js\"></script> <script src=\"bower_components/angular-messages/angular-messages.js\"></script> <script src=\"bower_components/angular-resource/angular-resource.js\"></script> <script src=\"bower_components/angular-route/angular-route.js\"></script> <script src=\"bower_components/angular-sanitize/angular-sanitize.js\"></script> <script src=\"bower_components/angular-touch/angular-touch.js\"></script> <script src=\"bower_components/angular-material/angular-material.js\"></script> <script src=\"bower_components/angular-local-storage/dist/angular-local-storage.js\"></script> <script src=\"bower_components/angular-material-expansion-panel/dist/md-expansion-panel.js\"></script> <!-- endbower --> <!-- endbuild --> <!-- build:js({.tmp,app}) scripts/scripts.js --> <script src=\"scripts/app.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBar.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramType.js\"></script> <script src=\"scripts/controllers/dashboard.js\"></script> <script src=\"scripts/controllers/programList.js\"></script> <script src=\"scripts/controllers/addProgram.js\"></script> <script src=\"scripts/controllers/addProgramType.js\"></script> <script src=\"scripts/controllers/programTypeList.js\"></script> <script src=\"scripts/services/programTypeService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeHeader.js\"></script> <script src=\"scripts/services/exerciseTypeService.js\"></script> <script src=\"scripts/services/utilService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeExercise.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeHeaderService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeExerciseService.js\"></script> <script src=\"scripts/directives/addRemove/addRemove.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeWeek.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeWeekService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeDay.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeDayService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeSet.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeSetService.js\"></script> <script src=\"scripts/services/addProgramTypeService.js\"></script> <script src=\"scripts/services/storageService.js\"></script> <script src=\"scripts/services/keyHandlerService.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeList.js\"></script> <script src=\"scripts/directives/list/list.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeListService.js\"></script> <script src=\"scripts/controllers/programTypeInformation.js\"></script> <script src=\"scripts/controllers/programInformation.js\"></script> <script src=\"scripts/services/programTypeInformationService.js\"></script> <script src=\"scripts/directives/addProgram/addProgram.js\"></script> <script src=\"scripts/directives/programList/programList.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeader.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeaderService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExerciseService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExercise.js\"></script> <script src=\"scripts/services/programService.js\"></script> <script src=\"scripts/directives/programList/programListService.js\"></script> <script src=\"scripts/services/programInformationService.js\"></script> <script src=\"scripts/controllers/editProgram.js\"></script> <script src=\"scripts/services/addProgramService.js\"></script> <script src=\"scripts/controllers/editProgramType.js\"></script> <script src=\"scripts/directives/messageCard/messageCard.js\"></script> <script src=\"scripts/services/toastService.js\"></script> <script src=\"scripts/services/defaultProgramTypeService.js\"></script> <script src=\"scripts/services/unitService.js\"></script> <script src=\"scripts/services/dashboardService.js\"></script> <script src=\"scripts/directives/highlightCard/highlightCard.js\"></script> <script src=\"scripts/directives/quickComplete/quickComplete.js\"></script> <script src=\"scripts/directives/quickComplete/quickCompleteService.js\"></script> <script src=\"scripts/services/recentlyActiveService.js\"></script> <script src=\"scripts/directives/help/helpService.js\"></script> <script src=\"scripts/directives/help/help.js\"></script> <script src=\"scripts/controllers/dialogController.js\"></script> <script src=\"scripts/directives/bottomNavigationBar/bottomNavigationBar.js\"></script> <script src=\"scripts/controllers/settings.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSetting.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSettingService.js\"></script> <script src=\"scripts/services/programconversionservice.js\"></script> <script src=\"scripts/services/adWeightService.js\"></script> <script src=\"scripts/services/adTriggerService.js\"></script> <script src=\"scripts/services/sideNavigationService.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBarService.js\"></script> <script src=\"scripts/controllers/upgrade.js\"></script> <script src=\"scripts/controllers/contact.js\"></script> <script src=\"scripts/controllers/help.js\"></script> <script src=\"scripts/directives/resetSetting/resetSetting.js\"></script> <script src=\"scripts/directives/resetSetting/resetSettingService.js\"></script> <script src=\"scripts/directives/dashboardProgramList/dashboardProgramList.js\"></script> <script src=\"scripts/directives/listEmpty/listEmpty.js\"></script> <script src=\"scripts/services/programTypeLevelService.js\"></script> <script src=\"scripts/directives/listFilter/listFilter.js\"></script> <!-- endbuild --> </body> </html>"
+    "       ga('send', 'pageview');</script> <!-- build:js(.) scripts/vendor.js --> <!-- bower:js --> <script src=\"bower_components/angular/angular.js\"></script> <script src=\"bower_components/angular-animate/angular-animate.js\"></script> <script src=\"bower_components/angular-aria/angular-aria.js\"></script> <script src=\"bower_components/angular-cookies/angular-cookies.js\"></script> <script src=\"bower_components/angular-messages/angular-messages.js\"></script> <script src=\"bower_components/angular-resource/angular-resource.js\"></script> <script src=\"bower_components/angular-route/angular-route.js\"></script> <script src=\"bower_components/angular-sanitize/angular-sanitize.js\"></script> <script src=\"bower_components/angular-touch/angular-touch.js\"></script> <script src=\"bower_components/angular-material/angular-material.js\"></script> <script src=\"bower_components/angular-local-storage/dist/angular-local-storage.js\"></script> <script src=\"bower_components/angular-material-expansion-panel/dist/md-expansion-panel.js\"></script> <!-- endbower --> <!-- endbuild --> <!-- build:js({.tmp,app}) scripts/scripts.js --> <script src=\"scripts/app.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBar.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramType.js\"></script> <script src=\"scripts/controllers/dashboard.js\"></script> <script src=\"scripts/controllers/programList.js\"></script> <script src=\"scripts/controllers/addProgram.js\"></script> <script src=\"scripts/controllers/addProgramType.js\"></script> <script src=\"scripts/controllers/programTypeList.js\"></script> <script src=\"scripts/services/programTypeService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeHeader.js\"></script> <script src=\"scripts/services/exerciseTypeService.js\"></script> <script src=\"scripts/services/utilService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeExercise.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeHeaderService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeExerciseService.js\"></script> <script src=\"scripts/directives/addRemove/addRemove.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeWeek.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeWeekService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeDay.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeDayService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeSet.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeSetService.js\"></script> <script src=\"scripts/services/addProgramTypeService.js\"></script> <script src=\"scripts/services/storageService.js\"></script> <script src=\"scripts/services/keyHandlerService.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeList.js\"></script> <script src=\"scripts/directives/list/list.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeListService.js\"></script> <script src=\"scripts/controllers/programTypeInformation.js\"></script> <script src=\"scripts/controllers/programInformation.js\"></script> <script src=\"scripts/services/programTypeInformationService.js\"></script> <script src=\"scripts/directives/addProgram/addProgram.js\"></script> <script src=\"scripts/directives/programList/programList.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeader.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeaderService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExerciseService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExercise.js\"></script> <script src=\"scripts/services/programService.js\"></script> <script src=\"scripts/directives/programList/programListService.js\"></script> <script src=\"scripts/services/programInformationService.js\"></script> <script src=\"scripts/controllers/editProgram.js\"></script> <script src=\"scripts/services/addProgramService.js\"></script> <script src=\"scripts/controllers/editProgramType.js\"></script> <script src=\"scripts/directives/messageCard/messageCard.js\"></script> <script src=\"scripts/services/toastService.js\"></script> <script src=\"scripts/services/defaultProgramTypeService.js\"></script> <script src=\"scripts/services/unitService.js\"></script> <script src=\"scripts/services/dashboardService.js\"></script> <script src=\"scripts/directives/highlightCard/highlightCard.js\"></script> <script src=\"scripts/directives/quickComplete/quickComplete.js\"></script> <script src=\"scripts/directives/quickComplete/quickCompleteService.js\"></script> <script src=\"scripts/services/recentlyActiveService.js\"></script> <script src=\"scripts/directives/help/helpService.js\"></script> <script src=\"scripts/directives/help/help.js\"></script> <script src=\"scripts/controllers/dialogController.js\"></script> <script src=\"scripts/directives/bottomNavigationBar/bottomNavigationBar.js\"></script> <script src=\"scripts/controllers/settings.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSetting.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSettingService.js\"></script> <script src=\"scripts/services/programconversionservice.js\"></script> <script src=\"scripts/services/adWeightService.js\"></script> <script src=\"scripts/services/adTriggerService.js\"></script> <script src=\"scripts/services/sideNavigationService.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBarService.js\"></script> <script src=\"scripts/controllers/upgrade.js\"></script> <script src=\"scripts/controllers/contact.js\"></script> <script src=\"scripts/controllers/help.js\"></script> <script src=\"scripts/directives/resetSetting/resetSetting.js\"></script> <script src=\"scripts/directives/resetSetting/resetSettingService.js\"></script> <script src=\"scripts/directives/dashboardProgramList/dashboardProgramList.js\"></script> <script src=\"scripts/directives/listEmpty/listEmpty.js\"></script> <script src=\"scripts/services/programTypeLevelService.js\"></script> <script src=\"scripts/directives/listFilter/listFilter.js\"></script> <script src=\"scripts/directives/orderList/orderList.js\"></script> <script src=\"scripts/directives/orderList/orderListService.js\"></script> <script src=\"scripts/directives/listFilter/listFilterService.js\"></script> <!-- endbuild --> </body> </html>"
   );
 
 
@@ -7163,6 +7422,11 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
   );
 
 
+  $templateCache.put('scripts/directives/orderList/orderListView.html',
+    "<div layout=\"column\"> <div layout=\"row\" layout-align=\"center none\"> <div layout=\"column\" flex=\"grow\"> <md-input-container class=\"no-margin-top no-margin-bottom\"> <md-select ng-model=\"selectedOrder\" aria-label=\"Order List Select\"> <md-option ng-repeat=\"orderValue in orderValues\" ng-selected=\"orderValue.text === selectedOrder.text\" ng-value=\"orderValue\"> {{orderValue.text}} </md-option> </md-select> </md-input-container> </div> <div layout=\"column\" flex=\"nogrow\"> <md-button class=\"md-icon-button\" ng-click=\"reverse(selectedOrder)\" aria-label=\"Clear\"> <md-icon ng-if=\"reversed === true\" class=\"padding-right-4\" md-svg-src=\"images/icons/downArrowBlack.svg\"></md-icon> <md-icon ng-if=\"reversed === false\" class=\"padding-right-4\" md-svg-src=\"images/icons/upArrowBlack.svg\"></md-icon> </md-button> </div> </div> </div>"
+  );
+
+
   $templateCache.put('scripts/directives/programList/programListView.html',
     "<div layout=\"column\"> <list edit-function=\"editFunction\" remove-function=\"removeFunction\" values=\"formattedPrograms\"></list> </div>"
   );
@@ -7239,7 +7503,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('views/programList.html',
-    "<div layout=\"column\" layout-padding> <list-filter class=\"no-padding-bottom\" filter-value=\"filterValue\"></list-filter> <program-list class=\"no-padding-top\" ng-if=\"programs && programs.length > 0\" programs=\"programs\" remove-function=\"removeFunction\" edit-function=\"editFunction\"></program-list> <list-empty ng-if=\"!programs || programs.length <= 0\" message=\"emptyListMessage\" button-text=\"emptyListButtonText\" button-link=\"emptyListButtonLink\"></list-empty> </div>"
+    "<div layout=\"column\" layout-padding> <list-filter class=\"no-padding-bottom\" values=\"filteredPrograms\" original-values=\"originalPrograms\" property=\"filterProperty\"></list-filter> <order-list class=\"no-padding-top\" order-values=\"orderValues\" key=\"orderKey\" reverse-key=\"reverseKey\" values=\"programs\" original-values=\"filteredPrograms\"></order-list> <program-list class=\"no-padding-top\" ng-if=\"programs && programs.length > 0\" programs=\"programs\" remove-function=\"removeFunction\" edit-function=\"editFunction\"></program-list> <list-empty ng-if=\"!programs || programs.length <= 0\" message=\"emptyListMessage\" button-text=\"emptyListButtonText\" button-link=\"emptyListButtonLink\"></list-empty> </div>"
   );
 
 
@@ -7249,7 +7513,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('views/programTypeList.html',
-    "<div layout=\"column\" layout-padding> <list-filter class=\"no-padding-bottom\" filter-value=\"filterValue\"></list-filter> <program-type-list ng-if=\"programTypes || programTypes.length > 0\" program-types=\"programTypes\"></program-type-list> <list-empty ng-if=\"!programTypes || programTypes.length <= 0\" message=\"emptyListMessage\" button-text=\"emptyListButtonText\" button-link=\"emptyListButtonLink\"></list-empty> </div>"
+    "<div layout=\"column\" layout-padding> <list-filter class=\"no-padding-bottom\" values=\"filteredProgramTypes\" original-values=\"originalProgramTypes\" property=\"filterProperty\"></list-filter> <order-list class=\"no-padding-top\" order-values=\"orderValues\" key=\"orderKey\" reverse-key=\"reverseKey\" values=\"programTypes\" original-values=\"filteredProgramTypes\"></order-list> <program-type-list ng-if=\"programTypes || programTypes.length > 0\" program-types=\"programTypes\"></program-type-list> <list-empty ng-if=\"!programTypes || programTypes.length <= 0\" message=\"emptyListMessage\" button-text=\"emptyListButtonText\" button-link=\"emptyListButtonLink\"></list-empty> </div>"
   );
 
 
