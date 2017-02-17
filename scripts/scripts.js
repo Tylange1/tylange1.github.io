@@ -1695,7 +1695,7 @@ angular.module('powerHouseApp')
           href: '#/program-type-information/' + programType.id,
           removable: !programType.default,
           editable: true,
-          color: 'background'
+          color: 'grey-A100'
         };
     };
 
@@ -1751,8 +1751,8 @@ angular.module('powerHouseApp')
       $location.path('program-list');
     };
 
-    $scope.calculatePercentageComplete = function(){
-      $scope.program = programService.updateProgramComplete($scope.program);
+    $scope.calculatePercentageComplete = function(day){
+      $scope.program = programService.updateProgramComplete($scope.program, day);
     };
 
   }]);
@@ -2040,7 +2040,7 @@ angular.module('powerHouseApp')
       return program;
     };
 
-    contract.updateProgramComplete = function(program){
+    contract.updateProgramComplete = function(program, day){
       var updatedProgram = program;
 
       var completedSets = 0;
@@ -2065,6 +2065,10 @@ angular.module('powerHouseApp')
       if(previouslyComplete !== newlyComplete && updatedProgram.complete === true){
         programCompleteService.programComplete(updatedProgram);
       }
+      else if(utilService.isDefined(day) && allSetsCompleteInDay(day)){
+        // Check if we have completed all sets for today, if we have show an ad
+        programCompleteService.dayComplete(day);
+      }
 
       return contract.updateProgram(updatedProgram);
     };
@@ -2081,6 +2085,15 @@ angular.module('powerHouseApp')
       });
     };
     
+    var allSetsCompleteInDay = function(day){
+      for(var i = 0; i < day.sets.length; i++){
+        if(day.sets[i].complete === false){
+          return false;
+        }
+      }
+      return true;
+    };
+
     var completeProgram = function(totalSets, completedSets){
       return (totalSets === completedSets);
     };
@@ -2277,7 +2290,7 @@ angular.module('powerHouseApp')
         href: '#/program-information/' + program.id,
         removable: !program.default,
         editable: true,
-        color: program.complete ? 'green-50' : 'background'
+        color: program.complete ? 'green-50' : 'grey-A100'
       };
     };
 
@@ -10584,8 +10597,8 @@ angular.module('powerHouseApp')
           return quickCompleteService.defined(scope.quickCompleteProgram);
         };
 
-        scope.calculatePercentageComplete = function(){
-          quickCompleteService.updateProgramComplete(scope.quickCompleteProgram);
+        scope.calculatePercentageComplete = function(day){
+          quickCompleteService.updateProgramComplete(scope.quickCompleteProgram, day);
         };
 
         scope.buttonClicked = function(){
@@ -10636,8 +10649,8 @@ angular.module('powerHouseApp')
       };
     };
 
-    contract.updateProgramComplete = function(program){
-      programService.updateProgramComplete(program);
+    contract.updateProgramComplete = function(program, day){
+      programService.updateProgramComplete(program, day);
     };
 
     var findNextSet = function(program){
@@ -10992,7 +11005,8 @@ angular.module('powerHouseApp')
       'addProgramType': 20,
       'editProgram': 20,
       'editProgramType': 20,
-      'completeProgram': 20
+      'completeProgram': 20,
+      'completeDay': 20
     };
 
     return contract;
@@ -11032,7 +11046,7 @@ angular.module('powerHouseApp')
     };
 
     var showAd = function(){
-      
+      console.log('SHOW AD');
     };
 
     return contract;
@@ -11506,11 +11520,19 @@ angular.module('powerHouseApp')
     var contract = {};
 
     contract.programComplete = function(completeProgram){
-      toastService.showProgramCompleteToast('Well done, ' + completeProgram.name + ' complete', adFunctions);
+      toastService.showProgramCompleteToast('Well done, ' + completeProgram.name + ' complete', programCompleteAdFunction);
     };
 
-    var adFunctions = function(){
-      adTriggerService.incrementCount(adWeightService.completeProgram);
+    contract.dayComplete = function(day){
+      toastService.showProgramCompleteToast('Well done, ' + day.name + ' complete', dayCompleteAdFunction);
+    };
+
+    var programCompleteAdFunction = function(){
+      adTriggerService.incrementCount(adWeightService.weights.completeProgram);
+    };
+
+    var dayCompleteAdFunction = function(){
+      adTriggerService.incrementCount(adWeightService.weights.completeDay);
     };
 
     return contract;
@@ -12091,7 +12113,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('scripts/directives/quickComplete/quickCompleteView.html',
-    "<div layout=\"column\"> <md-card ng-if=\"defined()\"> <md-card-header class=\"no-padding-right\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header-text layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <span class=\"font-weight-600\">{{quickCompleteProgram.name}}</span> <span>{{week.name}} | {{day.name}}</span> <span flex=\"nogrow\">{{set.numberOfSets}} sets</span> </div> </md-card-header-text> <md-checkbox class=\"no-margin\" ng-model=\"set.complete\" ng-change=\"calculatePercentageComplete()\" aria-label=\"complete set\" flex=\"nogrow\"></md-checkbox> <help template-url=\"helpTemplateUrl\"></help> </md-card-header> <md-progress-linear ng-if=\"quickCompleteProgram.percentComplete >= 0\" md-mode=\"determinate\" value=\"{{quickCompleteProgram.percentComplete}}\"></md-progress-linear> <md-card-content class=\"no-padding-top no-padding-bottom no-padding-left no-padding-right\"> <md-list> <span class=\"body-list-item\"> <md-list-item class=\"md-2-line\" ng-repeat=\"setExercise in exercises\" flex> <div ng-if=\"setExercise.exercise.exerciseType.id === 0\" class=\"md-list-item-text\" flex> <h3 flex>{{setExercise.exercise.name}}</h3> <p>{{setExercise.numberOfReps}} reps at {{setExercise.weight}}{{unit.textName}}</p> </div> <div ng-if=\"setExercise.exercise.exerciseType.id === 1\" class=\"md-list-item-text\"> <h3 flex>{{setExercise.exercise.name}}</h3> <p>{{setExercise.numberOfReps}} reps</p> </div> <div ng-if=\"setExercise.exercise.exerciseType.id === 2\" class=\"md-list-item-text\"> <h3 flex>{{setExercise.exercise.name}}</h3> <p>Duration: {{setExercise.duration}}</p> </div> </md-list-item> </span> </md-list> </md-card-content> </md-card> <md-card class=\"quickcomplete\" ng-if=\"!defined()\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header class=\"no-padding-right\"> <md-card-header-text layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <span class=\"font-weight-600\">No most recent program</span> </div> </md-card-header-text> <help template-url=\"helpTemplateUrl\"></help> </md-card-header> </md-card> </div>"
+    "<div layout=\"column\"> <md-card ng-if=\"defined()\"> <md-card-header class=\"no-padding-right\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header-text layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <span class=\"font-weight-600\">{{quickCompleteProgram.name}}</span> <span>{{week.name}} | {{day.name}}</span> <span flex=\"nogrow\">{{set.numberOfSets}} sets</span> </div> </md-card-header-text> <md-checkbox class=\"no-margin\" ng-model=\"set.complete\" ng-change=\"calculatePercentageComplete(day)\" aria-label=\"complete set\" flex=\"nogrow\"></md-checkbox> <help template-url=\"helpTemplateUrl\"></help> </md-card-header> <md-progress-linear ng-if=\"quickCompleteProgram.percentComplete >= 0\" md-mode=\"determinate\" value=\"{{quickCompleteProgram.percentComplete}}\"></md-progress-linear> <md-card-content class=\"no-padding-top no-padding-bottom no-padding-left no-padding-right\"> <md-list> <span class=\"body-list-item\"> <md-list-item class=\"md-2-line\" ng-repeat=\"setExercise in exercises\" flex> <div ng-if=\"setExercise.exercise.exerciseType.id === 0\" class=\"md-list-item-text\" flex> <h3 flex>{{setExercise.exercise.name}}</h3> <p>{{setExercise.numberOfReps}} reps at {{setExercise.weight}}{{unit.textName}}</p> </div> <div ng-if=\"setExercise.exercise.exerciseType.id === 1\" class=\"md-list-item-text\"> <h3 flex>{{setExercise.exercise.name}}</h3> <p>{{setExercise.numberOfReps}} reps</p> </div> <div ng-if=\"setExercise.exercise.exerciseType.id === 2\" class=\"md-list-item-text\"> <h3 flex>{{setExercise.exercise.name}}</h3> <p>Duration: {{setExercise.duration}}</p> </div> </md-list-item> </span> </md-list> </md-card-content> </md-card> <md-card class=\"quickcomplete\" ng-if=\"!defined()\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header class=\"no-padding-right\"> <md-card-header-text layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <span class=\"font-weight-600\">No most recent program</span> </div> </md-card-header-text> <help template-url=\"helpTemplateUrl\"></help> </md-card-header> </md-card> </div>"
   );
 
 
@@ -12146,7 +12168,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('views/programInformation.html',
-    "<div layout=\"column\" layout-padding> <div layout=\"column\"> <span ng-if=\"program !== undefined\" flex> <!-- HEADER --> <md-list> <md-list-item class=\"md-3-line background-white margin-bottom-10 no-padding-left no-padding-right\" md-whiteframe=\"2\"> <div class=\"padding-top-24 padding-bottom-16 padding-right-16 padding-left-16\" layout=\"row\" flex=\"100\"> <div layout=\"column\" flex> <div layout=\"column\" flex> <p class=\"list-text headline truncate-text\">{{program.name}}</p> <p class=\"list-text subhead truncate-text\">Total Weeks: {{program.weeks.length}}</p> <p class=\"list-text subhead truncate-text\">Increment: {{program.increment}}{{unit.textName}}</p> </div> </div> <div layout=\"row\" flex=\"none\" layout-align=\"center start\"> <md-button class=\"md-icon-button\" md-colors=\"{ background: 'orange-300' }\" ng-click=\"editFunction(program)\" aria-label=\"Edit\"> <md-icon md-svg-src=\"images/icons/edit.svg\"></md-icon> </md-button> <md-button class=\"md-icon-button\" md-colors=\"{ background: 'red-300' }\" class=\"md-raised\" ng-click=\"removeFunction(program)\" aria-label=\"Remove\"> <md-icon md-svg-src=\"images/icons/remove.svg\"></md-icon> </md-button> </div> </div> <md-progress-linear class=\"list-progress\" md-mode=\"determinate\" value=\"{{program.percentComplete}}\"></md-progress-linear> </md-list-item> </md-list> <!-- BODY --> <md-expansion-panel-group> <md-expansion-panel ng-repeat=\"week in program.weeks\"> <md-expansion-panel-collapsed> <div class=\"md-title\">{{week.name}}</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-collapsed> <md-expansion-panel-expanded> <md-expansion-panel-header ng-click=\"$panel.collapse()\"> <div class=\"md-title\">{{week.name}}</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-header> <md-expansion-panel-content> <md-list class=\"no-padding-bottom\" ng-repeat=\"day in week.days\" flex> <p class=\"no-margin-top\">{{day.name}}</p> <md-divider></md-divider> <span ng-repeat=\"set in day.sets\"> <span class=\"header-list-item\"> <md-list-item class=\"md-2-line\" md-colors=\"{ background: 'primary-50' }\" flex> <div class=\"md-list-item-text\"> <h3 flex>Set type: {{set.setType.name}}</h3> <p>Number of sets: {{set.numberOfSets}}</p> </div> <md-checkbox class=\"md-secondary\" ng-model=\"set.complete\" ng-change=\"calculatePercentageComplete()\" aria-label=\"Complete Set\"></md-checkbox> </md-list-item> </span> <span class=\"body-list-item\"> <md-list-item class=\"md-2-line\" ng-repeat=\"setExercise in set.exercises\" flex> <div ng-if=\"setExercise.exercise.exerciseType.id === 0\" class=\"md-list-item-text\" flex> <h3 flex>{{setExercise.exercise.name}}</h3> <p>{{setExercise.numberOfReps}} reps at {{setExercise.weight}}{{unit.textName}}</p> </div> <div ng-if=\"setExercise.exercise.exerciseType.id === 1\" class=\"md-list-item-text\"> <h3 flex>{{setExercise.exercise.name}}</h3> <p>{{setExercise.numberOfReps}} reps</p> </div> <div ng-if=\"setExercise.exercise.exerciseType.id === 2\" class=\"md-list-item-text\"> <h3 flex>{{setExercise.exercise.name}}</h3> <p>Duration: {{setExercise.duration}}</p> </div> </md-list-item> </span> <md-divider></md-divider> </span> </md-list> </md-expansion-panel-content> </md-expansion-panel-expanded> </md-expansion-panel> </md-expansion-panel-group> </span> </div> </div>"
+    "<div layout=\"column\" layout-padding> <div layout=\"column\"> <span ng-if=\"program !== undefined\" flex> <!-- HEADER --> <md-list> <md-list-item class=\"md-3-line background-white margin-bottom-10 no-padding-left no-padding-right\" md-whiteframe=\"2\"> <div class=\"padding-top-24 padding-bottom-16 padding-right-16 padding-left-16\" layout=\"row\" flex=\"100\"> <div layout=\"column\" flex> <div layout=\"column\" flex> <p class=\"list-text headline truncate-text\">{{program.name}}</p> <p class=\"list-text subhead truncate-text\">Total Weeks: {{program.weeks.length}}</p> <p class=\"list-text subhead truncate-text\">Increment: {{program.increment}}{{unit.textName}}</p> </div> </div> <div layout=\"row\" flex=\"none\" layout-align=\"center start\"> <md-button class=\"md-icon-button\" md-colors=\"{ background: 'orange-300' }\" ng-click=\"editFunction(program)\" aria-label=\"Edit\"> <md-icon md-svg-src=\"images/icons/edit.svg\"></md-icon> </md-button> <md-button class=\"md-icon-button\" md-colors=\"{ background: 'red-300' }\" class=\"md-raised\" ng-click=\"removeFunction(program)\" aria-label=\"Remove\"> <md-icon md-svg-src=\"images/icons/remove.svg\"></md-icon> </md-button> </div> </div> <md-progress-linear class=\"list-progress\" md-mode=\"determinate\" value=\"{{program.percentComplete}}\"></md-progress-linear> </md-list-item> </md-list> <!-- BODY --> <md-expansion-panel-group> <md-expansion-panel ng-repeat=\"week in program.weeks\"> <md-expansion-panel-collapsed> <div class=\"md-title\">{{week.name}}</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-collapsed> <md-expansion-panel-expanded> <md-expansion-panel-header ng-click=\"$panel.collapse()\"> <div class=\"md-title\">{{week.name}}</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-header> <md-expansion-panel-content> <md-list class=\"no-padding-bottom\" ng-repeat=\"day in week.days\" flex> <p class=\"no-margin-top\">{{day.name}}</p> <md-divider></md-divider> <span ng-repeat=\"set in day.sets\"> <span class=\"header-list-item\"> <md-list-item class=\"md-2-line\" md-colors=\"{ background: 'primary-50' }\" flex> <div class=\"md-list-item-text\"> <h3 flex>Set type: {{set.setType.name}}</h3> <p>Number of sets: {{set.numberOfSets}}</p> </div> <md-checkbox class=\"md-secondary\" ng-model=\"set.complete\" ng-change=\"calculatePercentageComplete(day)\" aria-label=\"Complete Set\"></md-checkbox> </md-list-item> </span> <span class=\"body-list-item\"> <md-list-item class=\"md-2-line\" ng-repeat=\"setExercise in set.exercises\" flex> <div ng-if=\"setExercise.exercise.exerciseType.id === 0\" class=\"md-list-item-text\" flex> <h3 flex>{{setExercise.exercise.name}}</h3> <p>{{setExercise.numberOfReps}} reps at {{setExercise.weight}}{{unit.textName}}</p> </div> <div ng-if=\"setExercise.exercise.exerciseType.id === 1\" class=\"md-list-item-text\"> <h3 flex>{{setExercise.exercise.name}}</h3> <p>{{setExercise.numberOfReps}} reps</p> </div> <div ng-if=\"setExercise.exercise.exerciseType.id === 2\" class=\"md-list-item-text\"> <h3 flex>{{setExercise.exercise.name}}</h3> <p>Duration: {{setExercise.duration}}</p> </div> </md-list-item> </span> <md-divider></md-divider> </span> </md-list> </md-expansion-panel-content> </md-expansion-panel-expanded> </md-expansion-panel> </md-expansion-panel-group> </span> </div> </div>"
   );
 
 
