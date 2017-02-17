@@ -1,0 +1,7 @@
+<div layout="column">
+    <add-program-type-set-exercise-select class="padding-bottom-8" exercises="exercises" exercise="set.exercises[0].exercise"></add-program-type-set-exercise-select>
+    <add-program-type-set-number-of-sets class="padding-top-8" number-of-sets="set.numberOfSets"></add-program-type-set-number-of-sets>
+    <add-program-type-set-exercise-weighted ng-if="set.exercises[0].exercise.exerciseType.id === 0" set-exercise="set.exercises[0]"></add-program-type-set-exercise-weighted>
+    <add-program-type-set-exercise-non-weighted ng-if="set.exercises[0].exercise.exerciseType.id === 1" set-exercise="set.exercises[0]"></add-program-type-set-exercise-non-weighted>
+    <add-program-type-set-exercise-cardio ng-if="set.exercises[0].exercise.exerciseType.id === 2" set-exercise="set.exercises[0]"></add-program-type-set-exercise-cardio>
+</div>

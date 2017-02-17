@@ -1,0 +1,15 @@
+<div layout="column">
+    <div layout="row" layout-align="center none">
+        <div layout="column" flex="grow">
+            <md-input-container class="no-margin-bottom margin-top-4">
+                <label><md-icon class="padding-right-4" md-svg-src="images/icons/searchBlack.svg"></md-icon>Filter</label>
+                <input ng-model="filterValue" flex>
+            </md-input-container>
+        </div>
+        <div layout="column" flex="nogrow">
+            <md-button class="md-icon-button" ng-click="clear()" aria-label="Clear">
+                <md-icon class="padding-right-4" md-svg-src="images/icons/clearBlack.svg"></md-icon>
+            </md-button>
+        </div>
+    </div>
+</div>

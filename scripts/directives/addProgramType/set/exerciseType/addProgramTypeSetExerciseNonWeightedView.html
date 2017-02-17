@@ -1,0 +1,13 @@
+<div layout="column">
+    <form name="addProgramTypeSetExerciseNonWeightedForm" layout="column" class="no-padding-bottom">
+        <!-- Numner of reps -->
+        <md-input-container class="no-margin-bottom no-margin-top">
+            <label>Number of Reps</label>
+            <input name="numberOfRepsInput" ng-model="setExercise.numberOfReps" type="number" min="0" step="1" required md-no-asterisk="true">
+            <div ng-messages="addProgramTypeSetExerciseNonWeightedForm.numberOfRepsInput.$error">
+                <div ng-message="required">Number of reps are required.</div>
+                <div ng-message="min">Must be greater than 0.</div>
+            </div>
+        </md-input-container>
+    </form>
+</div>

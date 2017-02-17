@@ -1,0 +1,131 @@
+<div layout="column" layout-padding>
+    
+    <div layout="column">
+        <span ng-if="programType !== undefined" flex>
+            
+            <!-- HEADER -->
+            <md-list>
+                <md-list-item class="md-3-line background-white margin-bottom-10 no-padding-left no-padding-right" md-whiteframe="2">
+                    <div class="padding-top-24 padding-bottom-16 padding-right-16 padding-left-16" layout="row" flex="100">
+                        <div layout="column" flex>
+                            <div layout="column" flex>
+                                <p class="list-text headline truncate-text">{{programType.programTypeName}}</p>
+                                <p ng-if="programType.level" class="list-text subhead truncate-text">Experience Level: {{programType.level.name}}</p>
+                                <p class="list-text subhead truncate-text">Total Weeks: {{programType.weeks.length}}, Total Sets: {{programType.totalNumberOfSets}}</p>
+                            </div>
+                        </div>
+                        <div layout="row" flex="none" layout-align="center start">
+                            <md-button class="md-icon-button" md-colors="{ background: 'orange-300' }" ng-click="editFunction(programType)" aria-label="Edit">
+                                <md-icon md-svg-src="images/icons/edit.svg"></md-icon>
+                            </md-button>
+                            <md-button ng-if="!programType.default" class="md-icon-button" md-colors="{ background: 'red-300' }" class="md-raised" ng-click="removeFunction(programType)" aria-label="Remove">
+                                <md-icon md-svg-src="images/icons/remove.svg"></md-icon>
+                            </md-button>                
+                        </div>
+                    </div>
+                </md-list-item> 
+            </md-list>
+
+            <!-- BODY -->
+            <md-expansion-panel-group>
+                <!-- Description -->
+                <md-expansion-panel ng-if="programType.description && programType.description.length > 0">
+                    <md-expansion-panel-collapsed>
+                        <div class="md-title">Description</div>
+                        <div class="md-summary"></div>
+                        <md-expansion-panel-icon></md-expansion-panel-icon>
+                    </md-expansion-panel-collapsed>
+                    <md-expansion-panel-expanded>
+                        <md-expansion-panel-header ng-click="$panel.collapse()">
+                            <div class="md-title">Description</div>
+                            <div class="md-summary"></div>
+                            <md-expansion-panel-icon></md-expansion-panel-icon>
+                        </md-expansion-panel-header>
+                        <md-expansion-panel-content>
+                            <p>{{programType.description}}</p>
+                        </md-expansion-panel-content>
+                    </md-expansion-panel-expanded>
+                </md-expansion-panel>
+                
+                <!-- Exercises -->
+                <md-expansion-panel>
+                    <md-expansion-panel-collapsed>
+                        <div class="md-title">Exercises</div>
+                        <div class="md-summary"></div>
+                        <md-expansion-panel-icon></md-expansion-panel-icon>
+                    </md-expansion-panel-collapsed>
+                    <md-expansion-panel-expanded>
+                        <md-expansion-panel-header ng-click="$panel.collapse()">
+                            <div class="md-title">Exercises</div>
+                            <div class="md-summary"></div>
+                            <md-expansion-panel-icon></md-expansion-panel-icon>
+                        </md-expansion-panel-header>
+                        <md-expansion-panel-content>
+                            <md-list ng-class="{ 'no-padding-top': true, 'no-padding-bottom': true }" ng-repeat="exercise in programType.exercises" flex>
+                                <md-list-item class="md-2-line" flex>
+                                    <div class="md-list-item-text" flex>
+                                        <h3 flex>{{exercise.name}}</h3>
+                                        <p>Type: {{exercise.exerciseType.name}}</p>
+                                    </div>
+                                </md-list-item>
+                                <md-divider ng-if="!$last"></md-divider>
+                            </md-list>
+                        </md-expansion-panel-content>
+                    </md-expansion-panel-expanded>
+                </md-expansion-panel>
+
+                <!-- Weeks -->
+                <md-expansion-panel ng-repeat="week in programType.weeks">
+                    <md-expansion-panel-collapsed>
+                        <div class="md-title">{{week.name}}</div>
+                        <div class="md-summary"></div>
+                        <md-expansion-panel-icon></md-expansion-panel-icon>
+                    </md-expansion-panel-collapsed>
+                    <md-expansion-panel-expanded>
+                        <md-expansion-panel-header ng-click="$panel.collapse()">
+                            <div class="md-title">{{week.name}}</div>
+                            <div class="md-summary"></div>
+                            <md-expansion-panel-icon></md-expansion-panel-icon>
+                        </md-expansion-panel-header>
+                        <md-expansion-panel-content>
+                            <md-list class="no-padding-top no-padding-bottom" ng-repeat="day in week.days" flex>
+                                <p class="no-margin-top">{{day.name}}</p>
+                                <md-divider></md-divider>
+
+                                <span ng-repeat="set in day.sets">
+                                    <span class="header-list-item">
+                                        <md-list-item class="md-2-line " md-colors="{ background: 'primary-50' }" flex>
+                                            <div class="md-list-item-text">
+                                                <h3 flex>Set type: {{set.setType.name}}</h3>
+                                                <p>Number of sets: {{set.numberOfSets}}</p>
+                                            </div>
+                                        </md-list-item>
+                                    </span>
+                                    <span class="body-list-item">
+                                        <md-list-item class="md-2-line" ng-repeat="setExercise in set.exercises" flex>
+                                            <div ng-if="setExercise.exercise.exerciseType.id === 0" class="md-list-item-text" flex>
+                                                <h3 flex>{{setExercise.exercise.name}}</h3>
+                                                <p>{{setExercise.numberOfReps}} reps at {{setExercise.oneRepMaxPercentage}}% ORM, Increment Multiplier: {{setExercise.incrementMultiplier}}</p>
+                                            </div>
+                                            <div ng-if="setExercise.exercise.exerciseType.id === 1" class="md-list-item-text">
+                                                <h3 flex>{{setExercise.exercise.name}}</h3>
+                                                <p>{{setExercise.numberOfReps}} reps</p>
+                                            </div>
+                                            <div ng-if="setExercise.exercise.exerciseType.id === 2" class="md-list-item-text">
+                                                <h3 flex>{{setExercise.exercise.name}}</h3>
+                                                <p>Duration: {{setExercise.duration}}</p>
+                                            </div>
+                                        </md-list-item>
+                                    </span>
+                                    <md-divider></md-divider>
+                                </span>
+
+                            </md-list>
+
+                        </md-expansion-panel-content>
+                    </md-expansion-panel-expanded>
+                </md-expansion-panel>
+            </md-expansion-panel-group>
+        </span>
+    </div>
+</div>

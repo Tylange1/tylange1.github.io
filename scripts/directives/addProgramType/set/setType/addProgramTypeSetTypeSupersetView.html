@@ -1,0 +1,46 @@
+<div layout="column">
+
+    <add-program-type-set-number-of-sets class="padding-top-8" number-of-sets="set.numberOfSets"></add-program-type-set-number-of-sets>
+
+    <md-list ng-if="hasConfirmed()" flex>
+        <md-list-item class="md-2-line secondary-button-padding" ng-repeat="exer in set.exercises" ng-if="exer.confirmed === true">
+            <div class="md-list-item-text" layout="column">
+                <h3>Exercise: {{exer.exercise.name}}</h3>
+                <h4>Type: {{exer.exercise.exerciseType.name}}</h4>
+                <span ng-if="exer.exercise.exerciseType.id === 0 || exer.exercise.exerciseType.id === 1">
+                    <h4>Reps: {{exer.numberOfReps}}</h4>
+                </span>
+                <span ng-if="exer.exercise.exerciseType.id === 2">
+                    <h4>Duration: {{exer.duration}}</h4>
+                </span>
+            </div>
+            <div layout="row" class="md-secondary">
+                <md-button class="md-fab md-mini" ng-click="editSetExercise(exer)" md-colors="{ background: 'orange-300' }" aria-label="Edit">
+                    <md-icon md-svg-src="images/icons/edit.svg"></md-icon>
+                </md-button>
+                <md-button class="md-fab md-mini" ng-click="removeSetExercise(exer)" md-colors="{ background: 'red-300' }" aria-label="Remove">
+                    <md-icon md-svg-src="images/icons/remove.svg"></md-icon>
+                </md-button>
+            </div>
+        </md-list-item>
+    </md-list>
+
+    <span layout="column" ng-repeat="exer in set.exercises" ng-if="exer.confirmed === false" class="no-padding-right no-padding-left padding-bottom-8">
+        <add-program-type-set-exercise-select class="padding-bottom-8" exercises="exercises" exercise="exer.exercise"></add-program-type-set-exercise-select>
+        <add-program-type-set-exercise-weighted ng-if="exer.exercise.exerciseType.id === 0" class="padding-top-8" set-exercise="exer"></add-program-type-set-exercise-weighted>
+        <add-program-type-set-exercise-non-weighted ng-if="exer.exercise.exerciseType.id === 1" class="padding-top-8" set-exercise="exer"></add-program-type-set-exercise-non-weighted>
+        <add-program-type-set-exercise-cardio ng-if="exer.exercise.exerciseType.id === 2" class="padding-top-8 padding-bottom-8" set-exercise="exer"></add-program-type-set-exercise-cardio>
+
+        <add-remove add-function="confirmSetExercise(exer)" remove-function="removeSetExercise(exer)" invalid-function="isInvalid(exer)" name="'Superset'"></add-remove>
+    </span>
+
+    <div layout="column" class="no-padding-bottom no-padding-top" layout-align="center center">
+        <md-button class="md-primary md-raised" ng-click="addSuperset()" aria-label="Add Superset">
+            <div layout="row" layout-align="center center">
+                <md-icon md-svg-src="images/icons/add.svg"></md-icon>
+                <span flex>Superset</span>
+            </div>
+        </md-button>
+    </div>
+
+</div>

@@ -1,0 +1,45 @@
+<div layout="column" ng-class="{ 'no-padding-right': true, 'no-padding-left': true, 'no-padding-bottom': true }" layout-padding>
+    <span class="md-subhead">Days</span>
+    <md-divider></md-divider>
+
+    <md-list ng-if="hasConfirmed()" flex>
+        <md-list-item class="md-2-line secondary-button-padding" ng-repeat="day in programTypeDays" ng-if="day.confirmed === true">
+            <div class="md-list-item-text" layout="column">
+                <h3>Name: {{day.name}}</h3>
+                <h4>Total Sets: {{day.sets.length}}</h4>
+            </div>
+            <div layout="row" class="md-secondary">
+                <md-button class="md-fab md-mini" ng-click="editDay(day)" md-colors="{ background: 'orange-300' }" aria-label="Edit">
+                    <md-icon md-svg-src="images/icons/edit.svg"></md-icon>
+                </md-button>
+                <md-button class="md-fab md-mini" ng-click="removeDay(day)" md-colors="{ background: 'red-300' }" aria-label="Remove">
+                    <md-icon md-svg-src="images/icons/remove.svg"></md-icon>
+                </md-button>
+            </div>
+        </md-list-item>
+    </md-list>
+    
+    <span ng-repeat="day in programTypeDays" ng-if="day.confirmed === false" ng-class="{ 'no-padding-right': true, 'no-padding-left': true }">
+        <form name="programTypeDayForm" layout="column">
+            <md-input-container ng-class="{ 'no-margin-top': true, 'no-margin-bottom': true }" flex="100">
+                <label>Day Name</label>
+                <input name="programTypeDayNameInput" ng-model="day.name" required md-no-asterisk="true">
+                <div ng-messages="programTypeDayForm.programTypeDayNameInput.$error">
+                    <div ng-message="required">A day name is required.</div>
+                </div>
+            </md-input-container>
+        </form>
+
+        <add-program-type-set program-type-sets="day.sets"></add-program-type-set>
+        <add-remove add-function="confirmDay(day)" remove-function="removeDay(day)" invalid-function="isInvalid(day)" name="'Day'"></add-remove>
+    </span>
+    
+    <div layout="column" ng-class="{ 'no-padding-bottom': true, 'no-padding-top': true }" layout-align="center center">
+        <md-button class="md-primary md-raised" ng-click="addDay()" aria-label="Add Day">
+            <div layout="row" layout-align="center center">
+                <md-icon md-svg-src="images/icons/add.svg"></md-icon>
+                <span flex>Day</span>
+            </div>
+        </md-button>
+    </div>
+</div>

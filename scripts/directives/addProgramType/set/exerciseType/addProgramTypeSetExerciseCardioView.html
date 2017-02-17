@@ -1,0 +1,27 @@
+<div layout="column">
+    <form name="addProgramTypeSetExerciseCardioForm" layout="column" class="no-padding-bottom">
+        <div layout="row">
+            <!-- Minutes -->
+            <md-input-container class="no-margin-bottom no-margin-top" flex="100">
+                <label>Minutes</label>
+                <input name="programTypeSetMinutesInput" ng-model="setExercise.minutes" type="number" min="0" step="1" required md-no-asterisk="true">
+                <div ng-messages="addProgramTypeSetExerciseCardioForm.programTypeSetMinutesInput.$error">
+                    <div ng-message="required">Minutes are required.</div>
+                    <div ng-message="type">A number is required.</div>
+                    <div ng-message="min">A number greater than 0 is required.</div>
+                </div>
+            </md-input-container>
+            <!-- Seconds -->
+            <md-input-container class="no-margin-bottom no-margin-top" flex="100">
+                <label>Seconds</label>
+                <input name="programTypeSetSecondsInput" ng-model="setExercise.seconds" type="number" min="0" max="59" step="1" required md-no-asterisk="true">
+                <div ng-messages="addProgramTypeSetExerciseCardioForm.programTypeSetSecondsInput.$error">
+                    <div ng-message="required">Seconds are required.</div>
+                    <div ng-message="type">A number is required.</div>
+                    <div ng-message="min">A number greater than 0 is required.</div>
+                    <div ng-message="max">A number less than 59 is required.</div>
+                </div>
+            </md-input-container>
+        </div>
+    </form>
+</div>

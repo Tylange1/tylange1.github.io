@@ -1,0 +1,9 @@
+<div layout="column">
+    <form name="addProgramTypeSetExerciseSelectForm" layout="column" class="no-padding-bottom">
+        <md-input-container class="no-margin-bottom no-margin-top">
+            <md-select ng-model="exercise" placeholder="Exercise" aria-label="Exercise Select">
+                <md-option ng-repeat="ex in exercises" ng-selected="exercise.id === ex.id" ng-value="ex">{{ex.name}}</md-option>
+            </md-select>
+        </md-input-container>
+    </form>
+</div>

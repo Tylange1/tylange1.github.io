@@ -129,55 +129,6 @@ angular.module('powerHouseApp')
 'use strict';
 
 /**
- * @ngdoc directive
- * @name powerHouseApp.directive:addProgramType
- * @description
- * # addProgramType
- */
-angular.module('powerHouseApp')
-  .directive('addProgramType', ['addProgramTypeService', function (addProgramTypeService) {
-    return {
-      templateUrl: 'scripts/directives/addProgramType/addProgramTypeView.html',
-      restrict: 'E',
-      scope: {
-        programTypeName: '=',
-        description: '=',
-        level: '=',
-        exercises: '=',
-        weeks: '=',
-        addFunction: '=',
-        removeFunction: '=',
-        invalidFunction: '='
-      },
-      link: function postLink(scope) {
-
-        addProgramTypeService.weeks = scope.weeks;
-        addProgramTypeService.exercises = scope.exercises;
-
-        scope.$watchCollection(function(){
-          return scope.exercises;
-        }, function(newValue, oldValue){
-          addProgramTypeService.exercises = scope.exercises;
-          // Exercise removed
-          if(newValue.length < oldValue.length){
-            scope.weeks = addProgramTypeService.exerciseRemoved(scope.exercises, scope.weeks);
-          }
-        });
-
-        scope.$watch(function(){
-          return addProgramTypeService.weeks;
-        }, function(newValue, oldValue){
-          if(newValue !== oldValue){
-            scope.weeks = newValue;
-          }
-        }, true);
-      }
-    };
-  }]);
-
-'use strict';
-
-/**
  * @ngdoc function
  * @name powerHouseApp.controller:DashboardCtrl
  * @description
@@ -200,20 +151,12 @@ angular.module('powerHouseApp')
     $scope.activeSubheadText = dashboardService.activeSubheadText;
 
     // Quick Complete
-    $scope.quickCompleteProgram = dashboardService.quickCompleteProgram;
+    $scope.quickCompleteProgram = dashboardService.getQuickCompleteProgram();
 
     // Program List
     $scope.programs = dashboardService.getActivePrograms(); 
 
     $scope.$watchCollection(function(){
-      return dashboardService.getActivePrograms();
-    }, function(newValue, oldValue){
-      if(newValue !== oldValue){
-        $scope.programs = dashboardService.getActivePrograms();
-      }
-    });
-
-    $scope.$watch(function(){
       return dashboardService.getCompletedPrograms();
     }, function(){
       $scope.completedHighlightText = dashboardService.completedHighlightText;
@@ -221,16 +164,18 @@ angular.module('powerHouseApp')
 
     $scope.$watchCollection(function(){
       return dashboardService.getActivePrograms();
-    }, function(){
+    }, function(newValue, oldValue){
       $scope.activeHighlightText = dashboardService.activeHighlightText;
+      if(newValue !== oldValue){
+        $scope.programs = dashboardService.getActivePrograms();
+      }
     });
 
     $scope.$watch(function(){
       return dashboardService.getQuickCompleteProgram();
     }, function(){
-      $scope.quickCompleteProgram = dashboardService.quickCompleteProgram;
+      $scope.quickCompleteProgram = dashboardService.getQuickCompleteProgram();
     }, true);
-
   }]);
 
 'use strict';
@@ -244,9 +189,12 @@ angular.module('powerHouseApp')
  */
 angular.module('powerHouseApp')
   .controller('programListCtrl', ['$scope', '$filter', 'programService', 'programListService', function ($scope, $filter, programService, programListService) {
-    $scope.originalPrograms = programService.getPrograms();
-    $scope.filteredPrograms = $scope.originalPrograms;
-    $scope.programs = $scope.originalPrograms;
+
+    var updatePrograms = function(){
+      $scope.originalPrograms = programService.getPrograms();
+      $scope.filteredPrograms = $scope.originalPrograms;
+      $scope.programs = $scope.originalPrograms;
+    };
 
     // Empty list
     $scope.emptyListMessage = 'Start by adding a program';
@@ -263,10 +211,11 @@ angular.module('powerHouseApp')
       return programService.getPrograms();
     }, function(newValue, oldValue){
       if(newValue !== oldValue){
-        $scope.programs = programService.getPrograms();
+        updatePrograms();
       }
     });
-
+    
+    updatePrograms();
   }]);
 
 'use strict';
@@ -379,9 +328,12 @@ angular.module('powerHouseApp')
  */
 angular.module('powerHouseApp')
   .controller('ProgramTypeListCtrl', ['$scope', '$filter', 'programTypeService', 'programTypeListService', function ($scope, $filter, programTypeService, programTypeListService) {
-    $scope.originalProgramTypes = programTypeService.getProgramTypes();
-    $scope.filteredProgramTypes = $scope.originalProgramTypes;
-    $scope.programTypes = $scope.originalProgramTypes;
+
+    var updateProgramTypes = function(){
+      $scope.originalProgramTypes = programTypeService.getProgramTypes();
+      $scope.filteredProgramTypes = $scope.originalProgramTypes;
+      $scope.programTypes = $scope.originalProgramTypes;
+    };
 
     // Empty list
     $scope.emptyListMessage = 'Start by adding a program type';
@@ -394,22 +346,121 @@ angular.module('powerHouseApp')
     $scope.orderKey = programTypeListService.orderKey;
     $scope.reverseKey = programTypeListService.reverseKey;
 
-    $scope.$watch(function(){
-      return $scope.filterValue;
-    }, function(newValue, oldValue){
-      if(newValue !== oldValue){
-        $scope.programTypes = $filter('filter')($scope.originalProgramTypes, { programTypeName: newValue });
-      }
-    });
-
-    $scope.$watch(function(){
+    $scope.$watchCollection(function(){
       return programTypeService.getProgramTypes();
     }, function(newValue, oldValue){
       if(newValue !== oldValue){
-        $scope.programTypes = programTypeService.getProgramTypes();
+        updateProgramTypes();
       }
     });
+
+    updateProgramTypes();
+  }]);
+
+'use strict';
+
+/**
+ * @ngdoc service
+ * @name powerHouseApp.addProgramTypeService
+ * @description
+ * # addProgramTypeService
+ * Service in the powerHouseApp.
+ */
+angular.module('powerHouseApp')
+  .service('addProgramTypeService', ['utilService', 'programTypeService', 'exerciseTypeService', function (utilService, programTypeService, exerciseTypeService) {
     
+    var contract = {
+      exercises: [],
+      weeks: [],
+      previousWeeks: []
+    };
+    
+    contract.addProgramType = function(programTypeName, level, description, exercises, weeks){
+      programTypeService.addProgramType(programTypeName, level, description, exercises, weeks);
+    } ;
+
+    contract.isInvalid = function(programName, level, description, exercises, weeks){
+      return (isNameInvalid(programName) || isLevelInvalid(level) || isDescriptionInvalid(description) || isExerciseInvalid(exercises) || isWeeksInvalid(weeks));
+    };
+
+    contract.exerciseRemoved = function(exercises, weeks){
+      var rWeeks = weeks;
+      contract.previousWeeks = angular.copy(weeks);
+
+      var updatedWeeks = [];
+      rWeeks.forEach(function(week){
+        var updatedDays = updateDays(exercises, week);
+        if(updatedDays.length > 0){
+          updatedWeeks.push(week);
+        }
+      });
+
+      return updatedWeeks;
+    };
+
+    var updateDays = function(exercises, week){
+      var updatedDays = [];
+
+      week.days.forEach(function(day){
+        var updatedSets = updateSets(exercises, day);
+        if(updatedSets.length > 0){
+          updatedDays.push(day);
+        }
+      });
+
+      return updatedDays;
+    };
+
+    var updateSets = function(exercises, day){
+      var updatedSets = [];
+
+      day.sets.forEach(function(set){
+        var updatedSetExercises = updateSetExercises(exercises, set);
+        if(updatedSetExercises.length > 0){
+          updatedSets.push(set);
+        }
+      });
+
+      return updatedSets;
+    };
+
+    var updateSetExercises = function(exercises, set){
+      var updatedSetExercises = [];
+
+      set.exercises.forEach(function(setExercise){
+        if(exerciseTypeService.containsExercise(exercises, setExercise.exercise) === true){
+          updatedSetExercises.push(setExercise);
+        }
+      });
+
+      return updatedSetExercises;
+    };
+
+    contract.exerciseRemoveUndone = function(){
+      contract.weeks = contract.previousWeeks;
+    };
+
+    var isNameInvalid = function(programName){
+      return (utilService.isUndefined(programName) || programName === '' || programTypeService.nameTaken(programName));
+    };
+
+    var isLevelInvalid = function(level){
+      return utilService.isUndefined(level);
+    };
+
+    var isDescriptionInvalid = function(description){
+      return utilService.isUndefined(description);
+    };
+
+    var isExerciseInvalid = function(exercises){
+      return (utilService.isUndefined(exercises) || exercises.length <= 0);
+    };
+
+    var isWeeksInvalid = function(weeks){
+      return (utilService.isUndefined(weeks) || weeks.length <= 0);
+    };
+
+    return contract;
   }]);
 
 'use strict';
@@ -445,12 +496,14 @@ angular.module('powerHouseApp')
 
     contract.removeProgramType = function(programType){
       var tempProgramTypes = angular.copy(contract.programTypes);
+      
       toastService.showUndoToast('Program type removed', function(){
         contract.programTypes = tempProgramTypes;  
+        storeProgramTypes();
       });
 
       contract.programTypes = utilService.removeFromArray(contract.programTypes, programType);
-      storeProgramTypes();
+      removeProgramType(programType);
     };
 
     contract.getProgramTypes = function(){
@@ -486,6 +539,11 @@ angular.module('powerHouseApp')
       utilService.isDefined(programType.exercises) && utilService.isDefined(programType.weeks));
     };
     
+    var removeProgramType = function(programType){
+      contract.programTypes = utilService.removeFromArray(contract.programTypes, programType);
+      storeProgramTypes();
+    };
+
     var storeProgramTypes = function(){
       storageService.storeValue(keyHandlerService.keys.programType, getNonDefaultProgramTypes(contract.programTypes));
     };
@@ -531,40 +589,6 @@ angular.module('powerHouseApp')
 
     init();
     return contract;
-  }]);
-
-'use strict';
-
-/**
- * @ngdoc directive
- * @name powerHouseApp.directive:addProgramTypeName
- * @description
- * # addProgramTypeName
- */
-angular.module('powerHouseApp')
-  .directive('addProgramTypeHeader', ['addProgramTypeHeaderService', function (addProgramTypeNameService) {
-    return {
-      templateUrl: 'scripts/directives/addProgramType/addProgramTypeHeaderView.html',
-      restrict: 'E',
-      scope: {
-        programTypeName: '=',
-        level: '=',
-        description: '='
-      },
-      link: function postLink(scope) {
-        scope.helpAddProgramTypeUrl = addProgramTypeNameService.helpAddProgramTypeUrl;
-
-        scope.levels = addProgramTypeNameService.getLevels();
-
-        scope.$watch(function(){
-          return scope.programTypeName;
-        }, function(newValue, oldValue){
-          if(newValue !== oldValue && scope.programTypeName === ''){
-            scope.programTypeDetailsForm.$setUntouched();
-          }
-        });
-      }
-    };
   }]);
 
 'use strict';
@@ -697,6 +721,135 @@ angular.module('powerHouseApp')
 
 /**
  * @ngdoc directive
+ * @name powerHouseApp.directive:addRemove
+ * @description
+ * # addRemove
+ */
+angular.module('powerHouseApp')
+  .directive('addRemove', function () {
+    return {
+      templateUrl: 'scripts/directives/addRemove/addRemoveView.html',
+      restrict: 'E',
+      scope: {
+        addFunction: '&',
+        removeFunction: '&',
+        invalidFunction: '&',
+        name: '='
+      },
+      link: function postLink() {
+      }
+    };
+  });
+
+'use strict';
+
+/**
+ * @ngdoc directive
+ * @name powerHouseApp.directive:addProgramType
+ * @description
+ * # addProgramType
+ */
+angular.module('powerHouseApp')
+  .directive('addProgramType', ['addProgramTypeService', function (addProgramTypeService) {
+    return {
+      templateUrl: 'scripts/directives/addProgramType/addProgramTypeView.html',
+      restrict: 'E',
+      scope: {
+        programTypeName: '=',
+        description: '=',
+        level: '=',
+        exercises: '=',
+        weeks: '=',
+        addFunction: '=',
+        removeFunction: '=',
+        invalidFunction: '='
+      },
+      link: function postLink(scope) {
+
+        addProgramTypeService.weeks = scope.weeks;
+        addProgramTypeService.exercises = scope.exercises;
+
+        scope.$watchCollection(function(){
+          return scope.exercises;
+        }, function(newValue, oldValue){
+          addProgramTypeService.exercises = scope.exercises;
+          // Exercise removed
+          if(newValue.length < oldValue.length){
+            addProgramTypeService.weeks = addProgramTypeService.exerciseRemoved(scope.exercises, scope.weeks);
+          }
+        });
+
+        scope.$watchCollection(function(){
+          return addProgramTypeService.weeks;
+        }, function(newValue, oldValue){
+          if(newValue !== oldValue){
+            scope.weeks = newValue;
+          }
+        });
+      }
+    };
+  }]);
+
+'use strict';
+
+/**
+ * @ngdoc directive
+ * @name powerHouseApp.directive:addProgramTypeName
+ * @description
+ * # addProgramTypeName
+ */
+angular.module('powerHouseApp')
+  .directive('addProgramTypeHeader', ['addProgramTypeHeaderService', function (addProgramTypeNameService) {
+    return {
+      templateUrl: 'scripts/directives/addProgramType/header/addProgramTypeHeaderView.html',
+      restrict: 'E',
+      scope: {
+        programTypeName: '=',
+        level: '=',
+        description: '='
+      },
+      link: function postLink(scope) {
+        scope.helpAddProgramTypeUrl = addProgramTypeNameService.helpAddProgramTypeUrl;
+
+        scope.levels = addProgramTypeNameService.getLevels();
+
+        scope.$watch(function(){
+          return scope.programTypeName;
+        }, function(newValue, oldValue){
+          if(newValue !== oldValue && scope.programTypeName === ''){
+            scope.programTypeDetailsForm.$setUntouched();
+          }
+        });
+      }
+    };
+  }]);
+
+'use strict';
+
+/**
+ * @ngdoc service
+ * @name powerHouseApp.addProgramTypeNameService
+ * @description
+ * # addProgramTypeNameService
+ * Service in the powerHouseApp.
+ */
+angular.module('powerHouseApp')
+  .service('addProgramTypeHeaderService', ['programTypeLevelService', function (programTypeLevelService) {
+    var contract = {
+      helpAddProgramTypeUrl: 'scripts/directives/addProgramType/help/helpAddProgramTypeTemplate.html'
+    };
+
+    contract.getLevels = function(){
+      return programTypeLevelService.getLevels();
+    };
+
+    return contract;
+  }]);
+
+'use strict';
+
+/**
+ * @ngdoc directive
  * @name powerHouseApp.directive:addProgramTypeExercise
  * @description
  * # addProgramTypeExercise
@@ -704,7 +857,7 @@ angular.module('powerHouseApp')
 angular.module('powerHouseApp')
   .directive('addProgramTypeExercise', ['addProgramTypeExerciseService', 'exerciseTypeService', function (addProgramTypeExerciseService, exerciseTypeService) {
     return {
-      templateUrl: 'scripts/directives/addProgramType/addProgramTypeExerciseView.html',
+      templateUrl: 'scripts/directives/addProgramType/exercise/addProgramTypeExerciseView.html',
       restrict: 'E',
       scope: {
         programTypeExercises: '='
@@ -755,28 +908,6 @@ angular.module('powerHouseApp')
 
 /**
  * @ngdoc service
- * @name powerHouseApp.addProgramTypeNameService
- * @description
- * # addProgramTypeNameService
- * Service in the powerHouseApp.
- */
-angular.module('powerHouseApp')
-  .service('addProgramTypeHeaderService', ['programTypeLevelService', function (programTypeLevelService) {
-    var contract = {
-      helpAddProgramTypeUrl: 'scripts/directives/addProgramType/helpAddProgramTypeTemplate.html'
-    };
-
-    contract.getLevels = function(){
-      return programTypeLevelService.getLevels();
-    };
-
-    return contract;
-  }]);
-
-'use strict';
-
-/**
- * @ngdoc service
  * @name powerHouseApp.addProgramTypeExerciseService
  * @description
  * # addProgramTypeExerciseService
@@ -786,7 +917,7 @@ angular.module('powerHouseApp')
   .service('addProgramTypeExerciseService', ['utilService', 'toastService', 'addProgramTypeService', function (utilService, toastService, addProgramTypeService) {
     
     var contract = {
-      helpAddProgramTypeExerciseTypeUrl: 'scripts/directives/addProgramType/helpAddProgramTypeExerciseTypeTemplate.html',
+      helpAddProgramTypeExerciseTypeUrl: 'scripts/directives/addProgramType/help/helpAddProgramTypeExerciseTypeTemplate.html',
       exercises: []
     };
 
@@ -856,30 +987,6 @@ angular.module('powerHouseApp')
 
 /**
  * @ngdoc directive
- * @name powerHouseApp.directive:addRemove
- * @description
- * # addRemove
- */
-angular.module('powerHouseApp')
-  .directive('addRemove', function () {
-    return {
-      templateUrl: 'scripts/directives/addRemove/addRemoveView.html',
-      restrict: 'E',
-      scope: {
-        addFunction: '&',
-        removeFunction: '&',
-        invalidFunction: '&',
-        name: '='
-      },
-      link: function postLink() {
-      }
-    };
-  });
-
-'use strict';
-
-/**
- * @ngdoc directive
  * @name powerHouseApp.directive:addProgramTypeWeek
  * @description
  * # addProgramTypeWeek
@@ -887,7 +994,7 @@ angular.module('powerHouseApp')
 angular.module('powerHouseApp')
   .directive('addProgramTypeWeek', ['addProgramTypeWeekService', function (addProgramTypeWeekService) {
     return {
-      templateUrl: 'scripts/directives/addProgramType/addProgramTypeWeekView.html',
+      templateUrl: 'scripts/directives/addProgramType/week/addProgramTypeWeekView.html',
       restrict: 'E',
       scope: {
         programTypeWeeks: '=',
@@ -1011,7 +1118,7 @@ angular.module('powerHouseApp')
 angular.module('powerHouseApp')
   .directive('addProgramTypeDay', ['addProgramTypeDayService', function (addProgramTypeDayService) {
     return {
-      templateUrl: 'scripts/directives/addProgramType/addProgramTypeDayView.html',
+      templateUrl: 'scripts/directives/addProgramType/day/addProgramTypeDayView.html',
       restrict: 'E',
       scope: {
         programTypeDays: '='
@@ -1136,7 +1243,7 @@ angular.module('powerHouseApp')
 angular.module('powerHouseApp')
   .directive('addProgramTypeSet', ['addProgramTypeSetService', 'addProgramTypeService', function (addProgramTypeSetService, addProgramTypeService) {
     return {
-      templateUrl: 'scripts/directives/addProgramType/addProgramTypeSetView.html',
+      templateUrl: 'scripts/directives/addProgramType/set/addProgramTypeSetView.html',
       restrict: 'E',
       scope: {
         programTypeSets: '=',
@@ -1148,14 +1255,6 @@ angular.module('powerHouseApp')
 
         scope.exercises = addProgramTypeService.exercises;
 
-        scope.$watchCollection(function(){
-          return addProgramTypeSetService.sets;
-        }, function(newValue, oldValue){
-          if(newValue !== oldValue){
-            scope.programTypeSets = addProgramTypeSetService.sets;
-          }
-        });
-
         scope.addSet = function(){
           scope.programTypeSets = addProgramTypeSetService.addSet(scope.programTypeSets);
         };
@@ -1166,10 +1265,11 @@ angular.module('powerHouseApp')
 
         scope.confirmSet = function(set){
           set.confirmed = true;
-          // Add the duration if needed
-          if(set.exercise.exerciseType.id === 2){
-            scope.programTypeSets = addProgramTypeSetService.formatCardio(scope.programTypeSets, set);        
-          }
+          set.exercises.forEach(function(setExercise){
+            if(setExercise.exercise.exerciseType.id === 2){
+              setExercise = addProgramTypeSetService.formatCardio(setExercise);
+            }
+          });
         };
 
         scope.removeSet = function(set){
@@ -1181,16 +1281,25 @@ angular.module('powerHouseApp')
         };
 
         scope.isInvalid = function(set){
-          return addProgramTypeSetService.isInvalid(scope.programTypeSets, set);
+          return addProgramTypeSetService.isInvalid(set);
         };
 
-        scope.formatTime = function(minutes, seconds){
-          addProgramTypeSetService.formatTime(minutes, seconds);
-        };
+        scope.$watchCollection(function(){
+          return addProgramTypeSetService.sets;
+        }, function(newValue, oldValue){
+          if(newValue !== oldValue){
+            scope.programTypeSets = addProgramTypeSetService.sets;
+          }
+        });
 
-        scope.removeNonComplete = function(exercise){
-          return addProgramTypeSetService.removeNonComplete(exercise);
-        };
+        scope.$watchCollection(function(){
+          return addProgramTypeService.exercises;
+        }, function(newValue, oldValue){
+          if(newValue !== oldValue){
+            scope.exercises = addProgramTypeService.exercises;
+          }
+        })
+
       }
     };
   }]);
@@ -1204,10 +1313,10 @@ angular.module('powerHouseApp')
  * Service in the powerHouseApp.
  */
 angular.module('powerHouseApp')
-  .service('addProgramTypeSetService', ['utilService', 'toastService', function (utilService, toastService) {
+  .service('addProgramTypeSetService', ['utilService', 'toastService', 'setTypeService', function (utilService, toastService, setTypeService) {
     var contract = {
-      helpAddProgramTypeIncrementUrl: 'scripts/directives/addProgramType/helpAddProgramTypeIncrementTemplate.html',
-      helpAddProgramTypeOneRepMaxUrl: 'scripts/directives/addProgramType/helpAddProgramTypeOneRepMaxTemplate.html',
+      helpAddProgramTypeIncrementUrl: 'scripts/directives/addProgramType/help/helpAddProgramTypeIncrementTemplate.html',
+      helpAddProgramTypeOneRepMaxUrl: 'scripts/directives/addProgramType/help/helpAddProgramTypeOneRepMaxTemplate.html',
       sets: []
     };
 
@@ -1225,32 +1334,6 @@ angular.module('powerHouseApp')
       return utilService.removeFromArray(setsArray, set);
     };
 
-    contract.isInvalid = function(setArray, set){
-      // Check that an exercise is selected
-      var exerciseInvalid = isExerciseInvalid(set.exercise);
-      if(exerciseInvalid){
-        return true;
-      }
-
-      var exerciseTypes = {
-        0: function(set){
-          return !(set.hasOwnProperty('numberOfSets') && set.hasOwnProperty('numberOfReps') && set.hasOwnProperty('oneRepMaxPercent') &&
-            set.hasOwnProperty('incrementMultiplier')) || !(utilService.isDefined(set.numberOfSets) && set.numberOfSets > 0 && set.numberOfSets % 1 === 0 && utilService.isDefined(set.numberOfReps) && 
-            set.numberOfReps > 0 && set.numberOfReps % 1 === 0 && utilService.isDefined(set.oneRepMaxPercent) && set.oneRepMaxPercent >= 0 && set.oneRepMaxPercent <= 100 && 
-            utilService.isDefined(set.incrementMultiplier));
-        },
-        1: function(set){
-          return !(set.hasOwnProperty('numberOfSets') && set.hasOwnProperty('numberOfReps')) || 
-            !(utilService.isDefined(set.numberOfSets) && set.numberOfSets > 0 && set.numberOfSets % 1 === 0 && utilService.isDefined(set.numberOfReps) && set.numberOfReps > 0 && set.numberOfReps % 1 === 0);
-        },
-        2: function(set){
-          return !(set.hasOwnProperty('minutes') && set.hasOwnProperty('seconds')) || !(set.minutes >= 0 && set.seconds >= 0 && set.seconds < 60);
-        }
-      };
-
-      return exerciseTypes[set.exercise.exerciseType.id](set);
-    };
-
     contract.hasConfirmed = function(setArray){
       for(var i = 0; i < setArray.length; i++){
         if(setArray[i].confirmed === true){
@@ -1260,16 +1343,97 @@ angular.module('powerHouseApp')
       return false;
     };
 
-    contract.formatCardio = function(programTypeSets, set){
-      var fProgramTypeSets = programTypeSets;
-
-      fProgramTypeSets = addDuration(programTypeSets, set);
-      fProgramTypeSets = addRepsAndSets(programTypeSets, set);
-
-      return fProgramTypeSets;
+    contract.formatCardio = function(setExercise){
+      var fSetExercise = setExercise;
+      fSetExercise = addDuration(setExercise);
+      fSetExercise = addReps(setExercise);
+      return fSetExercise;
     };
 
-    contract.formatTime = function(minutes, seconds){
+    contract.isInvalid = function(set){
+      return (setTypeInvalid(set.setType) || setNumberOfSetsInvalid(set) || setExercisesInvalid(set.setType, set.exercises));
+    };
+
+    contract.setExerciseTypesInvalid = function(setExercise){
+      var exerciseTypeFunctions = {
+        0: weightedExerciseInvalid(setExercise),
+        1: nonWeightedExerciseInvalid(setExercise),
+        2: cardioExerciseInvalid(setExercise)
+      }
+      if(exerciseInvalid(setExercise.exercise)){
+        return true;
+      }
+      return exerciseTypeFunctions[setExercise.exercise.exerciseType.id];
+    };
+
+    var setNumberOfSetsInvalid = function(set){
+      return (utilService.isUndefined(set.numberOfSets) || set.numberOfSets < 0);
+    };
+
+    var setTypeInvalid = function(setType){
+      return (utilService.isUndefined(setType) || utilService.isUndefined(setType.id));
+    };
+
+    var setExercisesInvalid = function(setType, setExercises){
+      return (utilService.isUndefined(setExercises) || setExercises.length < 1
+      || setExercisesNotConfirmed(setType, setExercises) || setExercisesTypesInvalid(setExercises));
+    };
+
+    var setExercisesNotConfirmed = function(setType, setExercises){
+      if(setType.id === 0){
+        return false;
+      }
+      for(var i = 0; i < setExercises.length; i++){
+        if(setExercises[i].confirmed === false){
+          return true;
+        }
+      }
+      return false;
+    };
+
+    var setExercisesTypesInvalid = function(setExercises){
+      // Checks if invalid for weighted, non-weighted and cardio exercise types
+      for(var i = 0; i < setExercises.length; i++){
+        if(contract.setExerciseTypesInvalid(setExercises[i]) === true){
+          return true;
+        }
+      }
+      return false;
+    };
+
+    var exerciseInvalid = function(exercise){
+      return (utilService.isUndefined(exercise) || utilService.isUndefined(exercise.id));
+    };
+
+    var weightedExerciseInvalid = function(setExercise){
+      return (utilService.isUndefined(setExercise.numberOfReps) || setExercise.numberOfReps < 1 
+      || utilService.isUndefined(setExercise.oneRepMaxPercentage) || setExercise.oneRepMaxPercentage < 0 
+      || setExercise.oneRepMaxPercentage > 100 || utilService.isUndefined(setExercise.incrementMultiplier) 
+      || setExercise.incrementMultiplier < 0);
+    };
+
+    var nonWeightedExerciseInvalid = function(setExercise){
+      return (utilService.isUndefined(setExercise.numberOfReps) || setExercise.numberOfReps < 1 );
+    };
+
+    var cardioExerciseInvalid = function(setExercise){
+      return (utilService.isUndefined(setExercise.minutes) || setExercise.minutes < 0
+      || utilService.isUndefined(setExercise.seconds) || setExercise.seconds < 0 || setExercise.seconds > 59);
+    };
+
+    var addDuration = function(setExercise){
+      var fSetExercise = setExercise;
+      fSetExercise.duration = formatTime(setExercise.minutes, setExercise.seconds);
+      return fSetExercise;
+    };
+
+    var addReps = function(setExercise){
+      var fSetExercise = setExercise;
+      fSetExercise.numberOfReps = 1;
+      return fSetExercise;
+    };
+
+    var formatTime = function(minutes, seconds){
       var rString = '';
       rString += minutes;
       rString += ':';
@@ -1287,119 +1451,14 @@ angular.module('powerHouseApp')
       return rString;
     };
 
-    contract.removeNonComplete = function(exercise){
-      return exercise.confirmed;
-    };
-
-    var addDuration = function(programTypeSets, set){
-      var updatedArray = programTypeSets;
-      // Find the index
-      var index = programTypeSets.indexOf(set);
-      if(index !== -1){
-         var updatedSet = set;
-         updatedSet.duration = contract.formatTime(set.minutes, set.seconds);
-         updatedArray[index] = updatedSet;
-      }
-      return updatedArray;
-    };
-
-    var addRepsAndSets = function(programTypeSets, set){
-      var updatedArray = programTypeSets;
-      // Find the index
-      var index = programTypeSets.indexOf(set);
-      if(index !== -1){
-         var updatedSet = set;
-
-         updatedSet.numberOfSets = 1;
-         updatedSet.numberOfReps = 1;
-
-         updatedArray[index] = updatedSet;
-      }
-      return updatedArray;
-    };
-
-    var isExerciseInvalid = function(exercise){
-      return !(utilService.isDefined(exercise) && utilService.isDefined(exercise.exerciseType) && 
-      exercise.exerciseType.hasOwnProperty('id') && exercise.exerciseType.hasOwnProperty('name'));
-    };
-
     var generateSet = function(id){
       return {
         id: id,
-        exercise: {},
-        confirmed: false
+        exercises: [],
+        confirmed: false,
+        complete: false,
+        setType: setTypeService.getDefault()
       };
-    };
-
-    return contract;
-  }]);
-
-'use strict';
-
-/**
- * @ngdoc service
- * @name powerHouseApp.addProgramTypeService
- * @description
- * # addProgramTypeService
- * Service in the powerHouseApp.
- */
-angular.module('powerHouseApp')
-  .service('addProgramTypeService', ['utilService', 'programTypeService', 'exerciseTypeService', function (utilService, programTypeService, exerciseTypeService) {
-    
-    var contract = {
-      exercises: [],
-      weeks: [],
-      previousWeeks: []
-    };
-    
-    contract.addProgramType = function(programTypeName, level, description, exercises, weeks){
-      programTypeService.addProgramType(programTypeName, level, description, exercises, weeks);
-    } ;
-
-    contract.isInvalid = function(programName, level, description, exercises, weeks){
-      return (isNameInvalid(programName) || isLevelInvalid(level) || isDescriptionInvalid(description) || isExerciseInvalid(exercises) || isWeeksInvalid(weeks));
-    };
-
-    contract.exerciseRemoved = function(exercises, weeks){
-      var rWeeks = weeks;
-      contract.previousWeeks = angular.copy(weeks);
-
-      weeks.forEach(function(week){
-        week.days.forEach(function(day){
-          for(var i = 0; i < day.sets.length; i++){
-            var set = day.sets[i];
-            if(exerciseTypeService.containsExercise(exercises, set.exercise) === false){
-              day.sets = utilService.removeFromArray(day.sets, set);
-            }
-          }
-        });
-      });
-
-      return rWeeks;
-    };
-
-    contract.exerciseRemoveUndone = function(){
-      contract.weeks = contract.previousWeeks;
-    };
-
-    var isNameInvalid = function(programName){
-      return (utilService.isUndefined(programName) || programName === '' || programTypeService.nameTaken(programName));
-    };
-
-    var isLevelInvalid = function(level){
-      return utilService.isUndefined(level);
-    };
-
-    var isDescriptionInvalid = function(description){
-      return utilService.isUndefined(description);
-    };
-
-    var isExerciseInvalid = function(exercises){
-      return (utilService.isUndefined(exercises) || exercises.length <= 0);
-    };
-
-    var isWeeksInvalid = function(weeks){
-      return (utilService.isUndefined(weeks) || weeks.length <= 0);
     };
 
     return contract;
@@ -1495,13 +1554,13 @@ angular.module('powerHouseApp')
           programTypeService.removeProgramType(programType.programType);
         };
 
-        scope.$watchCollection(function(){
+        scope.$watch(function(){
           return scope.programTypes;
         }, function(newValue, oldValue){
           if(newValue !== oldValue){
             scope.formattedProgramTypes = programTypeListService.formatProgramTypes(scope.programTypes);
           }
-        });
+        }, true);
 
       }
     };
@@ -1742,13 +1801,13 @@ angular.module('powerHouseApp')
           programService.removeProgram(program.program);
         };
 
-        scope.$watchCollection(function(){
+        scope.$watch(function(){
           return scope.programs;
         }, function(newValue, oldValue){
           if(newValue !== oldValue){
             scope.formattedPrograms = programListService.formatPrograms(scope.programs);
           }
-        });
+        }, true);
       }
     };
   }]);
@@ -1858,8 +1917,8 @@ angular.module('powerHouseApp')
  * Service in the powerHouseApp.
  */
 angular.module('powerHouseApp')
-  .service('programService', ['utilService', 'storageService', 'keyHandlerService', 'toastService', 'recentlyActiveService', 'unitService', 'programConversionService', 'adTriggerService', 'adWeightService',
-    function (utilService, storageService, keyHandlerService, toastService, recentlyActiveService, unitService, programConversionService, adTriggerService, adWeightService) {
+  .service('programService', ['utilService', 'storageService', 'keyHandlerService', 'toastService', 'recentlyActiveService', 'unitService', 'programConversionService', 'programCompleteService',
+    function (utilService, storageService, keyHandlerService, toastService, recentlyActiveService, unitService, programConversionService, programCompleteService) {
     var contract = {
       programs: [],
     };
@@ -1976,7 +2035,7 @@ angular.module('powerHouseApp')
 
       // Program is newly completed
       if(previouslyComplete !== newlyComplete && updatedProgram.complete === true){
-        adTriggerService.incrementCount(adWeightService.weights.completeProgram);
+        programCompleteService.programComplete(updatedProgram);
       }
 
       return contract.updateProgram(updatedProgram);
@@ -2072,12 +2131,23 @@ angular.module('powerHouseApp')
 
     var generateSets = function(day, increment, exercises){
       return day.sets.map(function(set){
-        if(set.exercise.exerciseType.id === 0){
-          set.weight = generateWeight((set.oneRepMaxPercent * 0.01), set.incrementMultiplier, increment, set.exercise.id, exercises);
-        }
-        set.complete = false;
-        return set;
+        return {
+          id: set.id,
+          setType: set.setType,
+          numberOfSets: set.numberOfSets,
+          exercises: generateSetExercises(set, increment, exercises),
+          complete: false
+        };
       });
+    };
+
+    var generateSetExercises = function(set, increment, exercises){
+        return set.exercises.map(function(setExercise){
+          if(setExercise.exercise.exerciseType.id === 0){
+            setExercise.weight = generateWeight((setExercise.oneRepMaxPercentage * 0.01), setExercise.incrementMultiplier, increment, setExercise.exercise.id, exercises);
+          }
+          return setExercise;
+        });
     };
 
     var generateWeight = function(oneRepMaxPercent, incrementMultiplier, increment, exerciseId, exercises){
@@ -2474,20 +2544,32 @@ angular.module('powerHouseApp')
     var position = 'bottom';
 
     contract.showUndoToast = function(text, undoFunction){
-      $mdToast.show(getToastObject(text, position)).then(function(response){
+      $mdToast.show(getUndoToastObject(text, position)).then(function(response){
         if (response === 'ok'){
           undoFunction();
         }
       });
     };
 
-    var getToastObject = function(text, position){
+    contract.showProgramCompleteToast = function(text, completeFunction){
+      $mdToast.show(getProgramCompleteObject(text, position)).then(function(response){
+        completeFunction();
+      });
+    };
+
+    var getUndoToastObject = function(text, position){
       return $mdToast.simple()
         .textContent(text)
         .action('UNDO')
         .highlightAction(true)
         .position(position);
     };
+
+    var getProgramCompleteObject = function(text, position){
+      return $mdToast.simple()
+        .textContent(text)
+        .position(position);
+    }
 
     return contract;
   }]);
@@ -2505,3663 +2587,7 @@ angular.module('powerHouseApp')
   .service('defaultProgramTypeService', function () {
     var contract = {};
 
-    var defaultProgramTypes = [
-      {  
-        'id':0,
-        'totalNumberOfSets':78,
-        'programTypeName':'5 by 5',
-        'level': { 'id': 0, 'name': 'Beginner' },
-        'description': '5 by 5 is a proved workout routine to gain strength, build muscle and burn fat. Five compound exercises are used in varying combinations with differing increment multipliers. This routine requires three days a week taking around fourty-five minutes per sessions to complete.',
-        'exercises':[  
-            {  
-              'id':0,
-              'name':'Squat',
-              'exerciseType':{  
-                  'id':0,
-                  'name':'Weighted'
-              },
-              'description':'',
-              'confirmed':true
-            },
-            {  
-              'id':1,
-              'name':'Bench Press',
-              'exerciseType':{  
-                  'id':0,
-                  'name':'Weighted'
-              },
-              'description':'',
-              'confirmed':true
-            },
-            {  
-              'id':2,
-              'name':'Barbell Row',
-              'exerciseType':{  
-                  'id':0,
-                  'name':'Weighted'
-              },
-              'description':'',
-              'confirmed':true
-            },
-            {  
-              'id':3,
-              'name':'Overhead Press',
-              'exerciseType':{  
-                  'id':0,
-                  'name':'Weighted'
-              },
-              'description':'',
-              'confirmed':true
-            },
-            {  
-              'id':4,
-              'name':'Deadlift',
-              'exerciseType':{  
-                  'id':0,
-                  'name':'Weighted'
-              },
-              'description':'',
-              'confirmed':true
-            }
-        ],
-        'weeks':[  
-            {  
-              'id':0,
-              'name':'Week One',
-              'days':[  
-                  {  
-                    'id':0,
-                    'name':'Day One',
-                    'sets':[  
-                        {  
-                          'id':0,
-                          'exercise':{  
-                              'id':0,
-                              'name':'Squat',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted'
-                              },
-                              'description':'',
-                              'confirmed':true
-                          },
-                          'confirmed':true,
-                          'numberOfSets':5,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':0
-                        },
-                        {  
-                          'id':1,
-                          'exercise':{  
-                              'id':1,
-                              'name':'Bench Press',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted'
-                              },
-                              'description':'',
-                              'confirmed':true
-                          },
-                          'confirmed':true,
-                          'numberOfSets':5,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':0
-                        },
-                        {  
-                          'id':2,
-                          'exercise':{  
-                              'id':2,
-                              'name':'Barbell Row',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted'
-                              },
-                              'description':'',
-                              'confirmed':true
-                          },
-                          'confirmed':true,
-                          'numberOfSets':5,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':0
-                        }
-                    ],
-                    'confirmed':true
-                  },
-                  {  
-                    'id':1,
-                    'name':'Day Two',
-                    'sets':[  
-                        {  
-                          'id':0,
-                          'exercise':{  
-                              'id':0,
-                              'name':'Squat',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted'
-                              },
-                              'description':'',
-                              'confirmed':true
-                          },
-                          'confirmed':true,
-                          'numberOfSets':5,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':1
-                        },
-                        {  
-                          'id':1,
-                          'exercise':{  
-                              'id':3,
-                              'name':'Overhead Press',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted'
-                              },
-                              'description':'',
-                              'confirmed':true
-                          },
-                          'confirmed':true,
-                          'numberOfSets':5,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':0
-                        },
-                        {  
-                          'id':2,
-                          'exercise':{  
-                              'id':4,
-                              'name':'Deadlift',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted'
-                              },
-                              'description':'',
-                              'confirmed':true
-                          },
-                          'confirmed':true,
-                          'numberOfSets':1,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':0
-                        }
-                    ],
-                    'confirmed':true
-                  },
-                  {  
-                    'id':2,
-                    'name':'Day Three',
-                    'sets':[  
-                        {  
-                          'id':0,
-                          'exercise':{  
-                              'id':0,
-                              'name':'Squat',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted'
-                              },
-                              'description':'',
-                              'confirmed':true
-                          },
-                          'confirmed':true,
-                          'numberOfSets':5,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':2
-                        },
-                        {  
-                          'id':1,
-                          'exercise':{  
-                              'id':1,
-                              'name':'Bench Press',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted'
-                              },
-                              'description':'',
-                              'confirmed':true
-                          },
-                          'confirmed':true,
-                          'numberOfSets':5,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':1
-                        },
-                        {  
-                          'id':2,
-                          'exercise':{  
-                              'id':2,
-                              'name':'Barbell Row',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted'
-                              },
-                              'description':'',
-                              'confirmed':true
-                          },
-                          'confirmed':true,
-                          'numberOfSets':5,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':1
-                        }
-                    ],
-                    'confirmed':true
-                  }
-              ],
-              'confirmed':true
-            },
-            {  
-              'id':1,
-              'name':'Week Two',
-              'days':[  
-                  {  
-                    'id':0,
-                    'name':'Day One',
-                    'sets':[  
-                        {  
-                          'id':0,
-                          'exercise':{  
-                              'id':0,
-                              'name':'Squat',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted'
-                              },
-                              'description':'',
-                              'confirmed':true
-                          },
-                          'confirmed':true,
-                          'numberOfSets':5,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':3
-                        },
-                        {  
-                          'id':1,
-                          'exercise':{  
-                              'id':3,
-                              'name':'Overhead Press',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted'
-                              },
-                              'description':'',
-                              'confirmed':true
-                          },
-                          'confirmed':true,
-                          'numberOfSets':5,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':1
-                        },
-                        {  
-                          'id':2,
-                          'exercise':{  
-                              'id':4,
-                              'name':'Deadlift',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted'
-                              },
-                              'description':'',
-                              'confirmed':true
-                          },
-                          'confirmed':true,
-                          'numberOfSets':1,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':2
-                        }
-                    ],
-                    'confirmed':true
-                  },
-                  {  
-                    'id':1,
-                    'name':'Day Two',
-                    'sets':[  
-                        {  
-                          'id':0,
-                          'exercise':{  
-                              'id':0,
-                              'name':'Squat',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted'
-                              },
-                              'description':'',
-                              'confirmed':true
-                          },
-                          'confirmed':true,
-                          'numberOfSets':5,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':4
-                        },
-                        {  
-                          'id':1,
-                          'exercise':{  
-                              'id':1,
-                              'name':'Bench Press',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted'
-                              },
-                              'description':'',
-                              'confirmed':true
-                          },
-                          'confirmed':true,
-                          'numberOfSets':5,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':2
-                        },
-                        {  
-                          'id':2,
-                          'exercise':{  
-                              'id':2,
-                              'name':'Barbell Row',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted'
-                              },
-                              'description':'',
-                              'confirmed':true
-                          },
-                          'confirmed':true,
-                          'numberOfSets':5,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':2
-                        }
-                    ],
-                    'confirmed':true
-                  },
-                  {  
-                    'id':2,
-                    'name':'Day Three',
-                    'sets':[  
-                        {  
-                          'id':0,
-                          'exercise':{  
-                              'id':0,
-                              'name':'Squat',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted'
-                              },
-                              'description':'',
-                              'confirmed':true
-                          },
-                          'confirmed':true,
-                          'numberOfSets':5,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':5
-                        },
-                        {  
-                          'id':1,
-                          'exercise':{  
-                              'id':3,
-                              'name':'Overhead Press',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted'
-                              },
-                              'description':'',
-                              'confirmed':true
-                          },
-                          'confirmed':true,
-                          'numberOfSets':5,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':2
-                        },
-                        {  
-                          'id':2,
-                          'exercise':{  
-                              'id':4,
-                              'name':'Deadlift',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted'
-                              },
-                              'description':'',
-                              'confirmed':true
-                          },
-                          'confirmed':true,
-                          'numberOfSets':1,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':4
-                        }
-                    ],
-                    'confirmed':true
-                  }
-              ],
-              'confirmed':true
-            }
-        ],
-        'default':true
-      },
-      {  
-        'id':1,
-        'totalNumberOfSets':93,
-        'programTypeName':'Smolov Junior',
-        'level': { 'id': 1, 'name': 'Intermediate' },
-        'description': 'Smolov Junior is a shortened version of the Smolov squatting routine. This routine takes place four days a week and can often be used for bench press as an alternative to squats.',
-        'exercises':[  
-            {  
-              'id':0,
-              'name':'Squat',
-              'exerciseType':{  
-                  'id':0,
-                  'name':'Weighted',
-              },
-              'description':'',
-              'confirmed':true,
-            }
-        ],
-        'weeks':[  
-            {  
-              'id':0,
-              'name':'Week One',
-              'days':[  
-                  {  
-                    'id':0,
-                    'name':'Day One',
-                    'sets':[  
-                        {  
-                          'id':0,
-                          'exercise':{  
-                              'id':0,
-                              'name':'Squat',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted',
-                              },
-                              'description':'',
-                              'confirmed':true,
-                          },
-                          'confirmed':true,
-                          'numberOfSets':6,
-                          'numberOfReps':6,
-                          'oneRepMaxPercent':70,
-                          'incrementMultiplier':0
-                        }
-                    ],
-                    'confirmed':true,
-                  },
-                  {  
-                    'id':1,
-                    'name':'Day Two',
-                    'sets':[  
-                        {  
-                          'id':0,
-                          'exercise':{  
-                              'id':0,
-                              'name':'Squat',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted',
-                              },
-                              'description':'',
-                              'confirmed':true,
-                          },
-                          'confirmed':true,
-                          'numberOfSets':7,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':75,
-                          'incrementMultiplier':0
-                        }
-                    ],
-                    'confirmed':true,
-                  },
-                  {  
-                    'id':2,
-                    'name':'Day Three',
-                    'sets':[  
-                        {  
-                          'id':0,
-                          'exercise':{  
-                              'id':0,
-                              'name':'Squat',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted',
-                              },
-                              'description':'',
-                              'confirmed':true,
-                          },
-                          'confirmed':true,
-                          'numberOfSets':8,
-                          'numberOfReps':4,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':0
-                        }
-                    ],
-                    'confirmed':true,
-                  },
-                  {  
-                    'id':3,
-                    'name':'Day Four',
-                    'sets':[  
-                        {  
-                          'id':0,
-                          'exercise':{  
-                              'id':0,
-                              'name':'Squat',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted',
-                              },
-                              'description':'',
-                              'confirmed':true,
-                          },
-                          'confirmed':true,
-                          'numberOfSets':10,
-                          'numberOfReps':3,
-                          'oneRepMaxPercent':85,
-                          'incrementMultiplier':0
-                        }
-                    ],
-                    'confirmed':true,
-                  }
-              ],
-              'confirmed':true,
-            },
-            {  
-              'id':1,
-              'name':'Week Two',
-              'days':[  
-                  {  
-                    'id':0,
-                    'name':'Day One',
-                    'sets':[  
-                        {  
-                          'id':0,
-                          'exercise':{  
-                              'id':0,
-                              'name':'Squat',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted',
-                              },
-                              'description':'',
-                              'confirmed':true,
-                          },
-                          'confirmed':true,
-                          'numberOfSets':6,
-                          'numberOfReps':6,
-                          'oneRepMaxPercent':70,
-                          'incrementMultiplier':1
-                        }
-                    ],
-                    'confirmed':true,
-                  },
-                  {  
-                    'id':1,
-                    'name':'Day Two',
-                    'sets':[  
-                        {  
-                          'id':0,
-                          'exercise':{  
-                              'id':0,
-                              'name':'Squat',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted',
-                              },
-                              'description':'',
-                              'confirmed':true,
-                          },
-                          'confirmed':true,
-                          'numberOfSets':7,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':75,
-                          'incrementMultiplier':1
-                        }
-                    ],
-                    'confirmed':true,
-                  },
-                  {  
-                    'id':2,
-                    'name':'Day Three',
-                    'sets':[  
-                        {  
-                          'id':0,
-                          'exercise':{  
-                              'id':0,
-                              'name':'Squat',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted',
-                              },
-                              'description':'',
-                              'confirmed':true,
-                          },
-                          'confirmed':true,
-                          'numberOfSets':8,
-                          'numberOfReps':4,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':1
-                        }
-                    ],
-                    'confirmed':true,
-                  },
-                  {  
-                    'id':3,
-                    'name':'Day Four',
-                    'sets':[  
-                        {  
-                          'id':0,
-                          'exercise':{  
-                              'id':0,
-                              'name':'Squat',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted',
-                              },
-                              'description':'',
-                              'confirmed':true,
-                          },
-                          'confirmed':true,
-                          'numberOfSets':10,
-                          'numberOfReps':3,
-                          'oneRepMaxPercent':85,
-                          'incrementMultiplier':1
-                        }
-                    ],
-                    'confirmed':true,
-                  }
-              ],
-              'confirmed':true,
-            },
-            {  
-              'id':2,
-              'name':'Week Three',
-              'days':[  
-                  {  
-                    'id':0,
-                    'name':'Day One',
-                    'sets':[  
-                        {  
-                          'id':0,
-                          'exercise':{  
-                              'id':0,
-                              'name':'Squat',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted',
-                              },
-                              'description':'',
-                              'confirmed':true,
-                          },
-                          'confirmed':true,
-                          'numberOfSets':6,
-                          'numberOfReps':6,
-                          'oneRepMaxPercent':70,
-                          'incrementMultiplier':2
-                        }
-                    ],
-                    'confirmed':true,
-                  },
-                  {  
-                    'id':1,
-                    'name':'Day Two',
-                    'sets':[  
-                        {  
-                          'id':0,
-                          'exercise':{  
-                              'id':0,
-                              'name':'Squat',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted',
-                              },
-                              'description':'',
-                              'confirmed':true,
-                          },
-                          'confirmed':true,
-                          'numberOfSets':7,
-                          'numberOfReps':5,
-                          'oneRepMaxPercent':75,
-                          'incrementMultiplier':2
-                        }
-                    ],
-                    'confirmed':true,
-                  },
-                  {  
-                    'id':2,
-                    'name':'Day Three',
-                    'sets':[  
-                        {  
-                          'id':0,
-                          'exercise':{  
-                              'id':0,
-                              'name':'Squat',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted',
-                              },
-                              'description':'',
-                              'confirmed':true,
-                          },
-                          'confirmed':true,
-                          'numberOfSets':8,
-                          'numberOfReps':4,
-                          'oneRepMaxPercent':80,
-                          'incrementMultiplier':2
-                        }
-                    ],
-                    'confirmed':true,
-                  },
-                  {  
-                    'id':3,
-                    'name':'Day Four',
-                    'sets':[  
-                        {  
-                          'id':0,
-                          'exercise':{  
-                              'id':0,
-                              'name':'Squat',
-                              'exerciseType':{  
-                                'id':0,
-                                'name':'Weighted',
-                              },
-                              'description':'',
-                              'confirmed':true,
-                          },
-                          'confirmed':true,
-                          'numberOfSets':10,
-                          'numberOfReps':3,
-                          'oneRepMaxPercent':85,
-                          'incrementMultiplier':2
-                        }
-                    ],
-                    'confirmed':true,
-                  }
-              ],
-              'confirmed':true,
-            }
-        ],
-        'default':true
-      },
-      {
-        'id': 2,
-        'totalNumberOfSets': 195,
-        'programTypeName': 'Smolov',
-        'level': { 'id': 2, 'name': 'Expert' },
-        'description': 'Smolov is a russian thirteen week squat training program. This program consists of five cycles including the phase in cycle, base cycle, switching phase, intense cycle and taper week. Note this program is for experts and is extremely challenging.',
-        'exercises': [
-          {
-            'id': 0,
-            'name': 'Squat',
-            'exerciseType': {
-              'id': 0,
-              'name': 'Weighted'
-            },
-            'description': '',
-            'confirmed': true
-          }
-        ],
-        'weeks': [
-          {
-            'id': 0,
-            'name': 'Phase In (1)',
-            'days': [
-              {
-                'id': 0,
-                'name': 'Day One',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 3,
-                    'numberOfReps': 8,
-                    'oneRepMaxPercent': 65,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 70,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 2,
-                    'numberOfReps': 2,
-                    'oneRepMaxPercent': 75,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 3,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 1,
-                    'oneRepMaxPercent': 80,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 1,
-                'name': 'Day Two',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 3,
-                    'numberOfReps': 8,
-                    'oneRepMaxPercent': 65,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 70,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 2,
-                    'numberOfReps': 2,
-                    'oneRepMaxPercent': 75,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 3,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 1,
-                    'oneRepMaxPercent': 80,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 2,
-                'name': 'Day Three',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 4,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 70,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 70,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 2,
-                    'numberOfReps': 2,
-                    'oneRepMaxPercent': 80,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 3,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 1,
-                    'oneRepMaxPercent': 90,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              }
-            ],
-            'confirmed': true
-          },
-          {
-            'id': 1,
-            'name': 'Phase In (2)',
-            'days': [
-              {
-                'id': 0,
-                'name': 'Day One',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 80,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 1,
-                'name': 'Day Two',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 82.5,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 2,
-                'name': 'Day Three',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 85,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              }
-            ],
-            'confirmed': true
-          },
-          {
-            'id': 2,
-            'name': 'Base Cycle (3)',
-            'days': [
-              {
-                'id': 0,
-                'name': 'Day One',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 4,
-                    'numberOfReps': 9,
-                    'oneRepMaxPercent': 70,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 1,
-                'name': 'Day Two',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 5,
-                    'numberOfReps': 7,
-                    'oneRepMaxPercent': 75,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 2,
-                'name': 'Day Three',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 7,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 80,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 3,
-                'name': 'Day Four',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 10,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 85,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              }
-            ],
-            'confirmed': true
-          },
-          {
-            'id': 3,
-            'name': 'Base Cycle (4)',
-            'days': [
-              {
-                'id': 0,
-                'name': 'Day One',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 4,
-                    'numberOfReps': 9,
-                    'oneRepMaxPercent': 70,
-                    'incrementMultiplier': 1
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 1,
-                'name': 'Day Two',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 5,
-                    'numberOfReps': 7,
-                    'oneRepMaxPercent': 75,
-                    'incrementMultiplier': 1
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 2,
-                'name': 'Day Three',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 7,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 80,
-                    'incrementMultiplier': 1
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 3,
-                'name': 'Day Four',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 10,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 85,
-                    'incrementMultiplier': 1
-                  }
-                ],
-                'confirmed': true
-              }
-            ],
-            'confirmed': true
-          },
-          {
-            'id': 4,
-            'name': 'Base Cycle (5)',
-            'days': [
-              {
-                'id': 0,
-                'name': 'Day One',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 4,
-                    'numberOfReps': 9,
-                    'oneRepMaxPercent': 70,
-                    'incrementMultiplier': 2
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 1,
-                'name': 'Day Two',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 5,
-                    'numberOfReps': 7,
-                    'oneRepMaxPercent': 75,
-                    'incrementMultiplier': 2
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 2,
-                'name': 'Day Three',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 7,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 80,
-                    'incrementMultiplier': 2
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 3,
-                'name': 'Day Four',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 10,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 85,
-                    'incrementMultiplier': 2
-                  }
-                ],
-                'confirmed': true
-              }
-            ],
-            'confirmed': true
-          },
-          {
-            'id': 5,
-            'name': 'Base Cycle (6)',
-            'days': [
-              {
-                'id': 0,
-                'name': 'Day One',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 1,
-                    'oneRepMaxPercent': 100,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 1,
-                'name': 'Day Two',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 1,
-                    'oneRepMaxPercent': 100,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              }
-            ],
-            'confirmed': true
-          },
-          {
-            'id': 6,
-            'name': 'Intense Cycle (9)',
-            'days': [
-              {
-                'id': 0,
-                'name': 'Day One',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 65,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 4,
-                    'oneRepMaxPercent': 75,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 3,
-                    'numberOfReps': 4,
-                    'oneRepMaxPercent': 85,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 3,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 90,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 1,
-                'name': 'Day Two',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 60,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 70,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 4,
-                    'oneRepMaxPercent': 80,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 3,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 90,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 4,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 2,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 85,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 2,
-                'name': 'Day Three',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 4,
-                    'oneRepMaxPercent': 65,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 4,
-                    'oneRepMaxPercent': 70,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 5,
-                    'numberOfReps': 4,
-                    'oneRepMaxPercent': 80,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              }
-            ],
-            'confirmed': true
-          },
-          {
-            'id': 7,
-            'name': 'Intense Cycle (10)',
-            'days': [
-              {
-                'id': 0,
-                'name': 'Day One',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 4,
-                    'oneRepMaxPercent': 60,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 4,
-                    'oneRepMaxPercent': 70,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 4,
-                    'oneRepMaxPercent': 80,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 3,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 90,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 4,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 2,
-                    'numberOfReps': 4,
-                    'oneRepMaxPercent': 90,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 1,
-                'name': 'Day Two',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 65,
-                    'incrementMultiplier': 0,
-                    'numberOfSets': 1
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 75,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 85,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 3,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 3,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 90,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 4,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 95,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 2,
-                'name': 'Day Three',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 65,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 75,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 4,
-                    'oneRepMaxPercent': 85,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 3,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 4,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 90,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              }
-            ],
-            'confirmed': true
-          },
-          {
-            'id': 8,
-            'name': 'Intense Cycle (11)',
-            'days': [
-              {
-                'id': 0,
-                'name': 'Day One',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 60,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 70,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 80,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 3,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 5,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 90,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 1,
-                'name': 'Day Two',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 60,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 70,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 80,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 3,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 2,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 95,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 2,
-                'name': 'Day Three',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 65,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 75,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 85,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 3,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 4,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 95,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              }
-            ],
-            'confirmed': true
-          },
-          {
-            'id': 9,
-            'name': 'Intense Cycle (12)',
-            'days': [
-              {
-                'id': 0,
-                'name': 'Day One',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 70,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 4,
-                    'oneRepMaxPercent': 80,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 5,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 90,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 1,
-                'name': 'Day Two',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 70,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 80,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 4,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 95,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 2,
-                'name': 'Day Three',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 75,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 4,
-                    'oneRepMaxPercent': 90,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 3,
-                    'numberOfReps': 4,
-                    'oneRepMaxPercent': 80,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              }
-            ],
-            'confirmed': true
-          },
-          {
-            'id': 10,
-            'name': 'Taper Week (13)',
-            'days': [
-              {
-                'id': 0,
-                'name': 'Day One',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 70,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 80,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 2,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 90,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 3,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 3,
-                    'numberOfReps': 4,
-                    'oneRepMaxPercent': 95,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 1,
-                'name': 'Day Two',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 4,
-                    'oneRepMaxPercent': 75,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 4,
-                    'numberOfReps': 4,
-                    'oneRepMaxPercent': 85,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 1,
-                    'oneRepMaxPercent': 100,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              }
-            ],
-            'confirmed': true
-          }
-        ],
-        'default': true
-      },
-      {
-        'id': 3,
-        'totalNumberOfSets': 47,
-        'programTypeName': 'Wendler\'s 5\/3\/1',
-        'level': { 'id': 1, 'name': 'Intermediate' },
-        'description': 'Jim Wendler\'s 5/3/1 progam starts with a relatively light weight percentage and consitently increases the weight percentage in order to hit new exercise repetitions personal records.',
-        'exercises': [
-          {
-            'id': 0,
-            'name': 'Squat',
-            'exerciseType': {
-              'id': 0,
-              'name': 'Weighted'
-            },
-            'description': '',
-            'confirmed': true
-          },
-          {
-            'id': 1,
-            'name': 'Bench Press',
-            'exerciseType': {
-              'id': 0,
-              'name': 'Weighted'
-            },
-            'description': '',
-            'confirmed': true
-          },
-          {
-            'id': 2,
-            'name': 'Deadlift',
-            'exerciseType': {
-              'id': 0,
-              'name': 'Weighted'
-            },
-            'description': '',
-            'confirmed': true
-          },
-          {
-            'id': 3,
-            'name': 'Overhead Press',
-            'exerciseType': {
-              'id': 0,
-              'name': 'Weighted'
-            },
-            'description': '',
-            'confirmed': true
-          }
-        ],
-        'weeks': [
-          {
-            'id': 0,
-            'name': 'Week One',
-            'days': [
-              {
-                'id': 0,
-                'name': 'Day One',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 3,
-                      'name': 'Overhead Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 65,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 3,
-                      'name': 'Overhead Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 75,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 3,
-                      'name': 'Overhead Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 85,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 1,
-                'name': 'Day Two',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 2,
-                      'name': 'Deadlift',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 65,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 2,
-                      'name': 'Deadlift',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 75,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 2,
-                      'name': 'Deadlift',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 85,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 2,
-                'name': 'Day Three',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 1,
-                      'name': 'Bench Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 65,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 1,
-                      'name': 'Bench Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 75,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 1,
-                      'name': 'Bench Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 85,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 3,
-                'name': 'Day Four',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 65,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 75,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 85,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              }
-            ],
-            'confirmed': true
-          },
-          {
-            'id': 1,
-            'name': 'Week Two',
-            'days': [
-              {
-                'id': 0,
-                'name': 'Day One',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 3,
-                      'name': 'Overhead Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 70,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 3,
-                      'name': 'Overhead Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 80,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 3,
-                      'name': 'Overhead Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 90,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 1,
-                'name': 'Day Two',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 2,
-                      'name': 'Deadlift',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 70,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 2,
-                      'name': 'Deadlift',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 80,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 2,
-                      'name': 'Deadlift',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 90,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 2,
-                'name': 'Day Three',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 1,
-                      'name': 'Bench Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 70,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 1,
-                      'name': 'Bench Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 80,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 1,
-                      'name': 'Bench Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 90,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 3,
-                'name': 'Day Four',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 70,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 90,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              }
-            ],
-            'confirmed': true
-          },
-          {
-            'id': 2,
-            'name': 'Week Three',
-            'days': [
-              {
-                'id': 0,
-                'name': 'Day One',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 3,
-                      'name': 'Overhead Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 75,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 3,
-                      'name': 'Overhead Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 85,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 3,
-                      'name': 'Overhead Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 1,
-                    'oneRepMaxPercent': 95,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 1,
-                'name': 'Day Two',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 2,
-                      'name': 'Deadlift',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 75,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 2,
-                      'name': 'Deadlift',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 85,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 2,
-                      'name': 'Deadlift',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 1,
-                    'oneRepMaxPercent': 95,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 2,
-                'name': 'Day Three',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 1,
-                      'name': 'Bench Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 75,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 1,
-                      'name': 'Bench Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 85,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 1,
-                      'name': 'Bench Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 1,
-                    'oneRepMaxPercent': 95,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 3,
-                'name': 'Day Four',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 75,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 3,
-                    'oneRepMaxPercent': 85,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 1,
-                    'oneRepMaxPercent': 95,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              }
-            ],
-            'confirmed': true
-          },
-          {
-            'id': 3,
-            'name': 'Week Four',
-            'days': [
-              {
-                'id': 0,
-                'name': 'Day One',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 3,
-                      'name': 'Overhead Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 40,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 3,
-                      'name': 'Overhead Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 50,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 3,
-                      'name': 'Overhead Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 60,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 1,
-                'name': 'Day Two',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 2,
-                      'name': 'Deadlift',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 40,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 2,
-                      'name': 'Deadlift',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 50,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 2,
-                      'name': 'Deadlift',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 60,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 2,
-                'name': 'Day Three',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 1,
-                      'name': 'Bench Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 40,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 1,
-                      'name': 'Bench Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 50,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 1,
-                      'name': 'Bench Press',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 60,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              },
-              {
-                'id': 3,
-                'name': 'Day Four',
-                'sets': [
-                  {
-                    'id': 0,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 40,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 1,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 50,
-                    'incrementMultiplier': 0
-                  },
-                  {
-                    'id': 2,
-                    'exercise': {
-                      'id': 0,
-                      'name': 'Squat',
-                      'exerciseType': {
-                        'id': 0,
-                        'name': 'Weighted'
-                      },
-                      'description': '',
-                      'confirmed': true
-                    },
-                    'confirmed': true,
-                    'numberOfSets': 1,
-                    'numberOfReps': 5,
-                    'oneRepMaxPercent': 60,
-                    'incrementMultiplier': 0
-                  }
-                ],
-                'confirmed': true
-              }
-            ],
-            'confirmed': true
-          }
-        ],
-        'default': true
-      }
-    ];
-
+    var defaultProgramTypes = [];
 
     contract.getDefaultProgramTypes = function(){
       return defaultProgramTypes;
@@ -6269,31 +2695,25 @@ angular.module('powerHouseApp')
 
     contract.getCompletedPrograms = function(){
       var completedPrograms = programService.getCompletedPrograms().length;
-
       if(changed(contract.completedHighlightText, completedPrograms)){
         contract.completedHighlightText = completedPrograms;
       }
-
       return completedPrograms;
     };
 
     contract.getActivePrograms = function(){
       var activePrograms = programService.getActivePrograms();
-
       if(changed(contract.activeHighlightText, activePrograms.length)){
         contract.activeHighlightText = activePrograms.length;
       }
-
       return activePrograms;
     };
 
     contract.getQuickCompleteProgram = function(){
       var quickCompleteProgram = recentlyActiveService.getRecentlyActive();
-
-      if(contract.quickCompleteProgram !== quickCompleteProgram){
+      if(changed(contract.quickCompleteProgram, quickCompleteProgram)){
         contract.quickCompleteProgram = quickCompleteProgram;
       }
-
       return quickCompleteProgram;
     };
 
@@ -6370,8 +2790,7 @@ angular.module('powerHouseApp')
             scope.week = data.week;
             scope.day = data.day;
             scope.set = data.set;
-            scope.exercise = data.exercise;
-            scope.setInformation = data.setInformation;
+            scope.exercises = data.exercises;
           }
         }, true);
       }
@@ -6403,8 +2822,7 @@ angular.module('powerHouseApp')
         week: nextSet.week,
         day: nextSet.day,
         set: nextSet.set,
-        exercise: nextSet.set.exercise.name,
-        setInformation: nextSet.set.numberOfSets + ' sets by ' + nextSet.set.numberOfReps + ' reps at ' + nextSet.set.weight + unitService.getCurrentUnit().textName
+        exercises: nextSet.set.exercises
       };
     };
 
@@ -7261,6 +3679,390 @@ angular.module('powerHouseApp')
     return contract;
   }]);
 
+'use strict';
+
+/**
+ * @ngdoc service
+ * @name powerHouseApp.programCompleteService
+ * @description
+ * # programCompleteService
+ * Service in the powerHouseApp.
+ */
+angular.module('powerHouseApp')
+  .service('programCompleteService', ['toastService', 'adTriggerService', 'adWeightService', function (toastService, adTriggerService, adWeightService) {
+    var contract = {};
+
+    contract.programComplete = function(completeProgram){
+      toastService.showProgramCompleteToast('Well done, ' + completeProgram.name + ' complete', adFunctions);
+    };
+
+    var adFunctions = function(){
+      adTriggerService.incrementCount(adWeightService.completeProgram);
+    };
+
+    return contract;
+  }]);
+
+'use strict';
+
+/**
+ * @ngdoc service
+ * @name powerHouseApp.setTypeService
+ * @description
+ * # setTypeService
+ * Service in the powerHouseApp.
+ */
+angular.module('powerHouseApp')
+  .service('setTypeService', function () {
+    var contract = {};
+
+    contract.types = [
+      {
+        id: 0,
+        name: 'Normal'
+      },
+      {
+        id: 1,
+        name: 'Superset'
+      },
+    ]
+
+    contract.getDefault = function(){
+      return contract.types[0];
+    };
+
+    return contract;
+  });
+
+'use strict';
+
+/**
+ * @ngdoc directive
+ * @name powerHouseApp.directive:addProgramTypeSetType
+ * @description
+ * # addProgramTypeSetType
+ */
+angular.module('powerHouseApp')
+  .directive('addProgramTypeSetType', ['setTypeService', function (setTypeService) {
+    return {
+      templateUrl: 'scripts/directives/addProgramType/set/setInformation/addProgramTypeSetTypeView.html',
+      restrict: 'E',
+      scope: {
+        setType: '='
+      },
+      link: function postLink(scope) {
+        scope.setTypes = setTypeService.types;
+      }
+    };
+  }]);
+
+'use strict';
+
+/**
+ * @ngdoc directive
+ * @name powerHouseApp.directive:addProgramTypeSetTypeNormal
+ * @description
+ * # addProgramTypeSetTypeNormal
+ */
+angular.module('powerHouseApp')
+  .directive('addProgramTypeSetTypeNormal', ['addProgramTypeSetTypeNormalService', function (addProgramTypeSetTypeNormalService) {
+    return {
+      templateUrl: 'scripts/directives/addProgramType/set/setType/addProgramTypeSetTypeNormalView.html',
+      restrict: 'E',
+      scope: {
+        exercises: '=',
+        set: '='
+      },
+      link: function postLink(scope) {
+
+        var init = function(){
+          scope.set.exercises = addProgramTypeSetTypeNormalService.initSetExercise(scope.set.exercises);
+        };
+
+        init();
+      }
+    };
+  }]);
+
+'use strict';
+
+/**
+ * @ngdoc directive
+ * @name powerHouseApp.directive:addProgramTypeSetExerciseWeighted
+ * @description
+ * # addProgramTypeSetExerciseWeighted
+ */
+angular.module('powerHouseApp')
+  .directive('addProgramTypeSetExerciseWeighted', function () {
+    return {
+      templateUrl: 'scripts/directives/addProgramType/set/exerciseType/addProgramTypeSetExerciseWeightedView.html',
+      restrict: 'E',
+      scope: {
+        setExercise: '='
+      },
+      link: function postLink() {
+      }
+    };
+  });
+
+'use strict';
+
+/**
+ * @ngdoc directive
+ * @name powerHouseApp.directive:addProgramTypeSetExerciseSelect
+ * @description
+ * # addProgramTypeSetExerciseSelect
+ */
+angular.module('powerHouseApp')
+  .directive('addProgramTypeSetExerciseSelect', function () {
+    return {
+      templateUrl: 'scripts/directives/addProgramType/set/setInformation/addProgramTypeSetExerciseSelectView.html',
+      restrict: 'E',
+      scope: {
+        exercises: '=',
+        exercise: '='
+      },
+      link: function postLink(scope) {
+      }
+    };
+  });
+
+'use strict';
+
+/**
+ * @ngdoc directive
+ * @name powerHouseApp.directive:addProgramTypeSetNumberOfSets
+ * @description
+ * # addProgramTypeSetNumberOfSets
+ */
+angular.module('powerHouseApp')
+  .directive('addProgramTypeSetNumberOfSets', function () {
+    return {
+      templateUrl: 'scripts/directives/addProgramType/set/setInformation/addProgramTypeSetNumberOfSetsView.html',
+      restrict: 'E',
+      scope: {
+        numberOfSets: '='
+      },
+      link: function postLink(scope) {
+        
+      }
+    };
+  });
+
+'use strict';
+
+/**
+ * @ngdoc directive
+ * @name powerHouseApp.directive:addProgramTypeSetExerciseNonWeighted
+ * @description
+ * # addProgramTypeSetExerciseNonWeighted
+ */
+angular.module('powerHouseApp')
+  .directive('addProgramTypeSetExerciseNonWeighted', function () {
+    return {
+      templateUrl: 'scripts/directives/addProgramType/set/exerciseType/addProgramTypeSetExerciseNonWeightedView.html',
+      restrict: 'E',
+      scope: {
+        setExercise: '='
+      },      
+      link: function postLink(scope, element, attrs) {
+      }
+    };
+  });
+
+'use strict';
+
+/**
+ * @ngdoc directive
+ * @name powerHouseApp.directive:addProgramTypeSetExerciseCardio
+ * @description
+ * # addProgramTypeSetExerciseCardio
+ */
+angular.module('powerHouseApp')
+  .directive('addProgramTypeSetExerciseCardio', function () {
+    return {
+      templateUrl: 'scripts/directives/addProgramType/set/exerciseType/addProgramTypeSetExerciseCardioView.html',
+      restrict: 'E',
+      scope: {
+        setExercise: '='
+      },
+      link: function postLink(scope, element, attrs) {
+      }
+    };
+  });
+
+'use strict';
+
+/**
+ * @ngdoc directive
+ * @name powerHouseApp.directive:addProgramTypeSetTypeSuperset
+ * @description
+ * # addProgramTypeSetTypeSuperset
+ */
+angular.module('powerHouseApp')
+  .directive('addProgramTypeSetTypeSuperset', ['addProgramTypeSetTypeSupersetService', function (addProgramTypeSetTypeSupersetService) {
+    return {
+      templateUrl: 'scripts/directives/addProgramType/set/setType/addProgramTypeSetTypeSupersetView.html',
+      restrict: 'E',
+      scope: {
+        exercises: '=',
+        set: '='
+      },
+      link: function postLink(scope) {
+
+        var init = function(){
+          scope.set.exercises = addProgramTypeSetTypeSupersetService.initSetExercise(scope.set.exercises);
+        };
+
+        scope.addSuperset = function(){
+          scope.set.exercises = addProgramTypeSetTypeSupersetService.addSuperset(scope.set.exercises);
+        };
+
+        scope.editSetExercise = function(setExercise){
+          setExercise.confirmed = false;
+        }
+
+        scope.confirmSetExercise = function(setExercise){
+          setExercise.confirmed = true;
+        };
+
+        scope.removeSetExercise = function(setExercise){
+          scope.set.exercises = addProgramTypeSetTypeSupersetService.removeSuperset(scope.set.exercises, setExercise);
+        };
+
+        scope.isInvalid = function(setExercise){
+          return addProgramTypeSetTypeSupersetService.isInvalid(setExercise);
+        }
+
+        scope.hasConfirmed = function(){
+          return addProgramTypeSetTypeSupersetService.hasConfirmed(scope.set.exercises);
+        };
+
+        scope.$watch(function(){
+          return addProgramTypeSetTypeSupersetService.superSets;
+        }, function(newValue, oldValue){
+          if(newValue !== oldValue){
+            scope.set.exercises = addProgramTypeSetTypeSupersetService.superSets;
+          }
+        });
+
+        init();
+      }
+    };
+  }]);
+
+'use strict';
+
+/**
+ * @ngdoc service
+ * @name powerHouseApp.addProgramSetTypeSupersetService
+ * @description
+ * # addProgramSetTypeSupersetService
+ * Service in the powerHouseApp.
+ */
+angular.module('powerHouseApp')
+  .service('addProgramTypeSetTypeSupersetService', ['utilService', 'addProgramTypeSetService', 'addProgramTypeSetExerciseService', 'toastService', function (utilService, addProgramTypeSetService, addProgramTypeSetExerciseService, toastService) {
+    var contract = {
+      superSets: []
+    };
+
+    contract.initSetExercise = function(setExercises){
+      return setExercises.filter(function(setExercise){
+        return setExercise.confirmed === true;
+      });
+    };
+
+    contract.addSuperset = function(setExercises){
+      return addProgramTypeSetExerciseService.addSetExercise(setExercises);
+    };
+
+    contract.removeSuperset = function(setExercises, setExercise){
+      var tempExerciseSetsArray = angular.copy(setExercises);
+      toastService.showUndoToast('Superset removed', function(){
+        contract.superSets = tempExerciseSetsArray;
+      });
+
+      return addProgramTypeSetExerciseService.removeSetExercise(setExercises, setExercise);;
+    };
+
+    contract.hasConfirmed = function(setExercises){
+      for(var i = 0; i < setExercises.length; i++){
+        if(setExercises[i].confirmed === true){
+          return true;
+        }
+      }
+      return false;  
+    };
+
+    contract.isInvalid = function(setExercise){
+      return addProgramTypeSetService.setExerciseTypesInvalid(setExercise);
+    };
+
+    return contract;
+  }]);
+
+'use strict';
+
+/**
+ * @ngdoc service
+ * @name powerHouseApp.addProgramTypeSetTypeNormalService
+ * @description
+ * # addProgramTypeSetTypeNormalService
+ * Service in the powerHouseApp.
+ */
+angular.module('powerHouseApp')
+  .service('addProgramTypeSetTypeNormalService', ['addProgramTypeSetExerciseService', function (addProgramTypeSetExerciseService) {
+    var contract = {};
+
+    contract.initSetExercise = function(setExercises){
+      if(setExercises.length > 0){
+        return setExercises;
+      }
+      return addProgramTypeSetExerciseService.addSetExercise(setExercises);
+    };
+
+    var filterNonConfirmed = function(setExercises){
+      return setExercises.filter(function(setExercise){
+        return setExercise.confirmed === true;
+      });
+    }
+
+    return contract;
+  }]);
+
+'use strict';
+
+/**
+ * @ngdoc service
+ * @name powerHouseApp.addProgramTypeSetExerciseService
+ * @description
+ * # addProgramTypeSetExerciseService
+ * Service in the powerHouseApp.
+ */
+angular.module('powerHouseApp')
+  .service('addProgramTypeSetExerciseService', ['utilService', function (utilService) {
+    var contract = {};
+
+    contract.addSetExercise = function(setExerciseArray){
+      setExerciseArray.push(generateSetExercise(utilService.getUniqueId(setExerciseArray)));
+      return setExerciseArray;
+    };
+
+    contract.removeSetExercise = function(setExerciseArray, setExercise){
+      return utilService.removeFromArray(setExerciseArray, setExercise);
+    };
+
+    var generateSetExercise = function(id){
+      return {
+        id: id,
+        confirmed: false,
+        exercise: {},
+      };
+    }
+
+    return contract;
+  }]);
+
 angular.module('powerHouseApp').run(['$templateCache', function($templateCache) {
   'use strict';
 
@@ -7281,7 +4083,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
     "\n" +
     "       ga('create', 'UA-XXXXX-X');\r" +
     "\n" +
-    "       ga('send', 'pageview');</script> <!-- build:js(.) scripts/vendor.js --> <!-- bower:js --> <script src=\"bower_components/angular/angular.js\"></script> <script src=\"bower_components/angular-animate/angular-animate.js\"></script> <script src=\"bower_components/angular-aria/angular-aria.js\"></script> <script src=\"bower_components/angular-cookies/angular-cookies.js\"></script> <script src=\"bower_components/angular-messages/angular-messages.js\"></script> <script src=\"bower_components/angular-resource/angular-resource.js\"></script> <script src=\"bower_components/angular-route/angular-route.js\"></script> <script src=\"bower_components/angular-sanitize/angular-sanitize.js\"></script> <script src=\"bower_components/angular-touch/angular-touch.js\"></script> <script src=\"bower_components/angular-material/angular-material.js\"></script> <script src=\"bower_components/angular-local-storage/dist/angular-local-storage.js\"></script> <script src=\"bower_components/angular-material-expansion-panel/dist/md-expansion-panel.js\"></script> <!-- endbower --> <!-- endbuild --> <!-- build:js({.tmp,app}) scripts/scripts.js --> <script src=\"scripts/app.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBar.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramType.js\"></script> <script src=\"scripts/controllers/dashboard.js\"></script> <script src=\"scripts/controllers/programList.js\"></script> <script src=\"scripts/controllers/addProgram.js\"></script> <script src=\"scripts/controllers/addProgramType.js\"></script> <script src=\"scripts/controllers/programTypeList.js\"></script> <script src=\"scripts/services/programTypeService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeHeader.js\"></script> <script src=\"scripts/services/exerciseTypeService.js\"></script> <script src=\"scripts/services/utilService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeExercise.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeHeaderService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeExerciseService.js\"></script> <script src=\"scripts/directives/addRemove/addRemove.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeWeek.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeWeekService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeDay.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeDayService.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeSet.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramTypeSetService.js\"></script> <script src=\"scripts/services/addProgramTypeService.js\"></script> <script src=\"scripts/services/storageService.js\"></script> <script src=\"scripts/services/keyHandlerService.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeList.js\"></script> <script src=\"scripts/directives/list/list.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeListService.js\"></script> <script src=\"scripts/controllers/programTypeInformation.js\"></script> <script src=\"scripts/controllers/programInformation.js\"></script> <script src=\"scripts/services/programTypeInformationService.js\"></script> <script src=\"scripts/directives/addProgram/addProgram.js\"></script> <script src=\"scripts/directives/programList/programList.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeader.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeaderService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExerciseService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExercise.js\"></script> <script src=\"scripts/services/programService.js\"></script> <script src=\"scripts/directives/programList/programListService.js\"></script> <script src=\"scripts/services/programInformationService.js\"></script> <script src=\"scripts/controllers/editProgram.js\"></script> <script src=\"scripts/services/addProgramService.js\"></script> <script src=\"scripts/controllers/editProgramType.js\"></script> <script src=\"scripts/directives/messageCard/messageCard.js\"></script> <script src=\"scripts/services/toastService.js\"></script> <script src=\"scripts/services/defaultProgramTypeService.js\"></script> <script src=\"scripts/services/unitService.js\"></script> <script src=\"scripts/services/dashboardService.js\"></script> <script src=\"scripts/directives/highlightCard/highlightCard.js\"></script> <script src=\"scripts/directives/quickComplete/quickComplete.js\"></script> <script src=\"scripts/directives/quickComplete/quickCompleteService.js\"></script> <script src=\"scripts/services/recentlyActiveService.js\"></script> <script src=\"scripts/directives/help/helpService.js\"></script> <script src=\"scripts/directives/help/help.js\"></script> <script src=\"scripts/controllers/dialogController.js\"></script> <script src=\"scripts/directives/bottomNavigationBar/bottomNavigationBar.js\"></script> <script src=\"scripts/controllers/settings.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSetting.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSettingService.js\"></script> <script src=\"scripts/services/programconversionservice.js\"></script> <script src=\"scripts/services/adWeightService.js\"></script> <script src=\"scripts/services/adTriggerService.js\"></script> <script src=\"scripts/services/sideNavigationService.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBarService.js\"></script> <script src=\"scripts/controllers/upgrade.js\"></script> <script src=\"scripts/controllers/contact.js\"></script> <script src=\"scripts/controllers/help.js\"></script> <script src=\"scripts/directives/resetSetting/resetSetting.js\"></script> <script src=\"scripts/directives/resetSetting/resetSettingService.js\"></script> <script src=\"scripts/directives/dashboardProgramList/dashboardProgramList.js\"></script> <script src=\"scripts/directives/listEmpty/listEmpty.js\"></script> <script src=\"scripts/services/programTypeLevelService.js\"></script> <script src=\"scripts/directives/listFilter/listFilter.js\"></script> <script src=\"scripts/directives/orderList/orderList.js\"></script> <script src=\"scripts/directives/orderList/orderListService.js\"></script> <script src=\"scripts/directives/listFilter/listFilterService.js\"></script> <!-- endbuild --> </body> </html>"
+    "       ga('send', 'pageview');</script> <!-- build:js(.) scripts/vendor.js --> <!-- bower:js --> <script src=\"bower_components/angular/angular.js\"></script> <script src=\"bower_components/angular-animate/angular-animate.js\"></script> <script src=\"bower_components/angular-aria/angular-aria.js\"></script> <script src=\"bower_components/angular-cookies/angular-cookies.js\"></script> <script src=\"bower_components/angular-messages/angular-messages.js\"></script> <script src=\"bower_components/angular-resource/angular-resource.js\"></script> <script src=\"bower_components/angular-route/angular-route.js\"></script> <script src=\"bower_components/angular-sanitize/angular-sanitize.js\"></script> <script src=\"bower_components/angular-touch/angular-touch.js\"></script> <script src=\"bower_components/angular-material/angular-material.js\"></script> <script src=\"bower_components/angular-local-storage/dist/angular-local-storage.js\"></script> <script src=\"bower_components/angular-material-expansion-panel/dist/md-expansion-panel.js\"></script> <!-- endbower --> <!-- endbuild --> <!-- build:js({.tmp,app}) scripts/scripts.js --> <script src=\"scripts/app.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBar.js\"></script> <script src=\"scripts/controllers/dashboard.js\"></script> <script src=\"scripts/controllers/programList.js\"></script> <script src=\"scripts/controllers/addProgram.js\"></script> <script src=\"scripts/controllers/addProgramType.js\"></script> <script src=\"scripts/controllers/programTypeList.js\"></script> <script src=\"scripts/services/addProgramTypeService.js\"></script> <script src=\"scripts/services/programTypeService.js\"></script> <script src=\"scripts/services/exerciseTypeService.js\"></script> <script src=\"scripts/services/utilService.js\"></script> <script src=\"scripts/directives/addRemove/addRemove.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramType.js\"></script> <script src=\"scripts/directives/addProgramType/header/addProgramTypeHeader.js\"></script> <script src=\"scripts/directives/addProgramType/header/addProgramTypeHeaderService.js\"></script> <script src=\"scripts/directives/addProgramType/exercise/addProgramTypeExercise.js\"></script> <script src=\"scripts/directives/addProgramType/exercise/addProgramTypeExerciseService.js\"></script> <script src=\"scripts/directives/addProgramType/week/addProgramTypeWeek.js\"></script> <script src=\"scripts/directives/addProgramType/week/addProgramTypeWeekService.js\"></script> <script src=\"scripts/directives/addProgramType/day/addProgramTypeDay.js\"></script> <script src=\"scripts/directives/addProgramType/day/addProgramTypeDayService.js\"></script> <script src=\"scripts/directives/addProgramType/set/addProgramTypeSet.js\"></script> <script src=\"scripts/directives/addProgramType/set/addProgramTypeSetService.js\"></script> <script src=\"scripts/services/storageService.js\"></script> <script src=\"scripts/services/keyHandlerService.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeList.js\"></script> <script src=\"scripts/directives/list/list.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeListService.js\"></script> <script src=\"scripts/controllers/programTypeInformation.js\"></script> <script src=\"scripts/controllers/programInformation.js\"></script> <script src=\"scripts/services/programTypeInformationService.js\"></script> <script src=\"scripts/directives/addProgram/addProgram.js\"></script> <script src=\"scripts/directives/programList/programList.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeader.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeaderService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExerciseService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExercise.js\"></script> <script src=\"scripts/services/programService.js\"></script> <script src=\"scripts/directives/programList/programListService.js\"></script> <script src=\"scripts/services/programInformationService.js\"></script> <script src=\"scripts/controllers/editProgram.js\"></script> <script src=\"scripts/services/addProgramService.js\"></script> <script src=\"scripts/controllers/editProgramType.js\"></script> <script src=\"scripts/directives/messageCard/messageCard.js\"></script> <script src=\"scripts/services/toastService.js\"></script> <script src=\"scripts/services/defaultProgramTypeService.js\"></script> <script src=\"scripts/services/unitService.js\"></script> <script src=\"scripts/services/dashboardService.js\"></script> <script src=\"scripts/directives/highlightCard/highlightCard.js\"></script> <script src=\"scripts/directives/quickComplete/quickComplete.js\"></script> <script src=\"scripts/directives/quickComplete/quickCompleteService.js\"></script> <script src=\"scripts/services/recentlyActiveService.js\"></script> <script src=\"scripts/directives/help/helpService.js\"></script> <script src=\"scripts/directives/help/help.js\"></script> <script src=\"scripts/controllers/dialogController.js\"></script> <script src=\"scripts/directives/bottomNavigationBar/bottomNavigationBar.js\"></script> <script src=\"scripts/controllers/settings.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSetting.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSettingService.js\"></script> <script src=\"scripts/services/programconversionservice.js\"></script> <script src=\"scripts/services/adWeightService.js\"></script> <script src=\"scripts/services/adTriggerService.js\"></script> <script src=\"scripts/services/sideNavigationService.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBarService.js\"></script> <script src=\"scripts/controllers/upgrade.js\"></script> <script src=\"scripts/controllers/contact.js\"></script> <script src=\"scripts/controllers/help.js\"></script> <script src=\"scripts/directives/resetSetting/resetSetting.js\"></script> <script src=\"scripts/directives/resetSetting/resetSettingService.js\"></script> <script src=\"scripts/directives/dashboardProgramList/dashboardProgramList.js\"></script> <script src=\"scripts/directives/listEmpty/listEmpty.js\"></script> <script src=\"scripts/services/programTypeLevelService.js\"></script> <script src=\"scripts/directives/listFilter/listFilter.js\"></script> <script src=\"scripts/directives/orderList/orderList.js\"></script> <script src=\"scripts/directives/orderList/orderListService.js\"></script> <script src=\"scripts/directives/listFilter/listFilterService.js\"></script> <script src=\"scripts/services/programcompleteservice.js\"></script> <script src=\"scripts/services/setTypeService.js\"></script> <script src=\"scripts/directives/addProgramType/set/setInformation/addProgramTypeSetType.js\"></script> <script src=\"scripts/directives/addProgramType/set/setType/addProgramTypeSetTypeNormal.js\"></script> <script src=\"scripts/directives/addProgramType/set/exerciseType/addProgramTypeSetExerciseWeighted.js\"></script> <script src=\"scripts/directives/addProgramType/set/setInformation/addProgramTypeSetExerciseSelect.js\"></script> <script src=\"scripts/directives/addProgramType/set/setInformation/addProgramTypeSetNumberOfSets.js\"></script> <script src=\"scripts/directives/addProgramType/set/exerciseType/addProgramTypeSetExerciseNonWeighted.js\"></script> <script src=\"scripts/directives/addProgramType/set/exerciseType/addProgramTypeSetExerciseCardio.js\"></script> <script src=\"scripts/directives/addProgramType/set/setType/addProgramTypeSetTypeSuperset.js\"></script> <script src=\"scripts/directives/addProgramType/set/setType/addProgramTypeSetTypeSupersetService.js\"></script> <script src=\"scripts/directives/addProgramType/set/setType/addprogramtypesettypenormalservice.js\"></script> <script src=\"scripts/services/addProgramTypeSetExerciseService.js\"></script> <!-- endbuild --> </body> </html>"
   );
 
 
@@ -7315,55 +4117,95 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
   );
 
 
-  $templateCache.put('scripts/directives/addProgramType/addProgramTypeDayView.html',
+  $templateCache.put('scripts/directives/addProgramType/addProgramTypeView.html',
+    "<div layout=\"column\"> <add-program-type-header program-type-name=\"programTypeName\" level=\"level\" description=\"description\"></add-program-type-header> <add-program-type-exercise program-type-exercises=\"exercises\"></add-program-type-exercise> <add-program-type-week program-type-weeks=\"weeks\"></add-program-type-week> <add-remove add-function=\"addFunction(programTypeName, level, description, exercises, weeks)\" remove-function=\"removeFunction()\" name=\"'Type'\" invalid-function=\"invalidFunction(programTypeName, level, description, exercises, weeks)\"></add-remove> </div>"
+  );
+
+
+  $templateCache.put('scripts/directives/addProgramType/day/addProgramTypeDayView.html',
     "<div layout=\"column\" ng-class=\"{ 'no-padding-right': true, 'no-padding-left': true, 'no-padding-bottom': true }\" layout-padding> <span class=\"md-subhead\">Days</span> <md-divider></md-divider> <md-list ng-if=\"hasConfirmed()\" flex> <md-list-item class=\"md-2-line secondary-button-padding\" ng-repeat=\"day in programTypeDays\" ng-if=\"day.confirmed === true\"> <div class=\"md-list-item-text\" layout=\"column\"> <h3>Name: {{day.name}}</h3> <h4>Total Sets: {{day.sets.length}}</h4> </div> <div layout=\"row\" class=\"md-secondary\"> <md-button class=\"md-fab md-mini\" ng-click=\"editDay(day)\" md-colors=\"{ background: 'orange-300' }\" aria-label=\"Edit\"> <md-icon md-svg-src=\"images/icons/edit.svg\"></md-icon> </md-button> <md-button class=\"md-fab md-mini\" ng-click=\"removeDay(day)\" md-colors=\"{ background: 'red-300' }\" aria-label=\"Remove\"> <md-icon md-svg-src=\"images/icons/remove.svg\"></md-icon> </md-button> </div> </md-list-item> </md-list> <span ng-repeat=\"day in programTypeDays\" ng-if=\"day.confirmed === false\" ng-class=\"{ 'no-padding-right': true, 'no-padding-left': true }\"> <form name=\"programTypeDayForm\" layout=\"column\"> <md-input-container ng-class=\"{ 'no-margin-top': true, 'no-margin-bottom': true }\" flex=\"100\"> <label>Day Name</label> <input name=\"programTypeDayNameInput\" ng-model=\"day.name\" required md-no-asterisk=\"true\"> <div ng-messages=\"programTypeDayForm.programTypeDayNameInput.$error\"> <div ng-message=\"required\">A day name is required.</div> </div> </md-input-container> </form> <add-program-type-set program-type-sets=\"day.sets\"></add-program-type-set> <add-remove add-function=\"confirmDay(day)\" remove-function=\"removeDay(day)\" invalid-function=\"isInvalid(day)\" name=\"'Day'\"></add-remove> </span> <div layout=\"column\" ng-class=\"{ 'no-padding-bottom': true, 'no-padding-top': true }\" layout-align=\"center center\"> <md-button class=\"md-primary md-raised\" ng-click=\"addDay()\" aria-label=\"Add Day\"> <div layout=\"row\" layout-align=\"center center\"> <md-icon md-svg-src=\"images/icons/add.svg\"></md-icon> <span flex>Day</span> </div> </md-button> </div> </div>"
   );
 
 
-  $templateCache.put('scripts/directives/addProgramType/addProgramTypeExerciseView.html',
+  $templateCache.put('scripts/directives/addProgramType/exercise/addProgramTypeExerciseView.html',
     "<div layout=\"column\"> <md-card> <md-card-header> <md-card-header-text>Exercises</md-card-header-text> </md-card-header> <md-card-content ng-class=\"{ 'no-padding-top' : true, 'no-padding-bottom' : true }\"> <div layout=\"column\"> <md-list ng-if=\"hasConfirmed()\" flex> <md-list-item class=\"md-2-line secondary-button-padding\" ng-repeat=\"exercise in programTypeExercises\" ng-if=\"exercise.confirmed === true\"> <div class=\"md-list-item-text\" layout=\"column\"> <h3>Name: {{exercise.name}}</h3> <h4>Type: {{exercise.exerciseType.name}}</h4> </div> <div layout=\"row\" class=\"md-secondary\"> <md-button class=\"md-fab md-mini\" ng-click=\"editExercise(exercise)\" md-colors=\"{ background: 'orange-300' }\" aria-label=\"Edit\"> <md-icon md-svg-src=\"images/icons/edit.svg\"></md-icon> </md-button> <md-button class=\"md-fab md-mini\" ng-click=\"removeExercise(exercise)\" md-colors=\"{ background: 'red-300' }\" aria-label=\"Remove\"> <md-icon md-svg-src=\"images/icons/remove.svg\"></md-icon> </md-button> </div> </md-list-item> </md-list> <form name=\"programTypeExerciseForm\" layout=\"column\" ng-repeat=\"exercise in programTypeExercises\" ng-if=\"exercise.confirmed === false\"> <md-input-container ng-class=\"{ 'no-margin-top': true, 'no-margin-bottom': true }\" flex=\"100\"> <label>Exercise Name</label> <input name=\"programTypeExerciseNameInput\" ng-model=\"exercise.name\" required md-no-asterisk=\"true\"> <div ng-messages=\"programTypeExerciseForm.programTypeExerciseNameInput.$error\"> <div ng-message=\"required\">An exercise name is required.</div> </div> </md-input-container> <md-input-container ng-class=\"{ 'no-margin-top': true, 'no-margin-bottom': true }\" flex=\"100\"> <div layout=\"row\"> <div flex=\"grow\"> <md-select ng-class=\"{ 'no-margin-top': true, 'padding-top-4': true }\" name=\"programTypeExerciseTypeSelect\" ng-model=\"exercise.exerciseType\" placeholder=\"Exercise Type\" required md-no-asterisk=\"true\"> <md-option ng-repeat=\"exerciseType in exerciseTypes\" ng-selected=\"exercise.exerciseType.id === exerciseType.id\" ng-value=\"exerciseType\">{{exerciseType.name}}</md-option> </md-select> <div ng-messages=\"programTypeExerciseForm.programTypeExerciseTypeSelect.$error\"> <div ng-message=\"required\">An exercise type is required.</div> </div> </div> <div> <help template-url=\"helpAddProgramTypeExerciseTypeUrl\"></help> </div> </div> </md-input-container> <add-remove add-function=\"confirmExercise(exercise)\" remove-function=\"removeExercise(exercise)\" invalid-function=\"isInvalid(exercise)\" name=\"'Exercise'\"></add-remove> </form> <div ng-class=\"{ 'padding-bottom-8': true }\" layout=\"column\" layout-align=\"center center\"> <md-button class=\"md-primary md-raised\" ng-click=\"addExercise()\" aria-label=\"Add Exercise\"> <div layout=\"row\" layout-align=\"center center\"> <md-icon md-svg-src=\"images/icons/add.svg\"></md-icon> <span flex>Exercise</span> </div> </md-button> </div> </div> </md-card-content> </md-card> </div>"
   );
 
 
-  $templateCache.put('scripts/directives/addProgramType/addProgramTypeHeaderView.html',
+  $templateCache.put('scripts/directives/addProgramType/header/addProgramTypeHeaderView.html',
     "<div layout=\"column\"> <md-card> <md-card-header layout-align=\"none center\"> <md-card-header-text>Add Program Type</md-card-header-text> <help template-url=\"helpAddProgramTypeUrl\"></help> </md-card-header> <md-card-content ng-class=\"{ 'no-padding-top' : true, 'no-padding-bottom' : true }\"> <form name=\"programTypeDetailsForm\" layout=\"column\"> <md-input-container flex=\"100\" ng-class=\"{ 'no-margin-top' : true, 'margin-bottom-8' : true }\"> <label>Program Type Name</label> <input name=\"programTypeNameInput\" ng-model=\"programTypeName\" required md-no-asterisk=\"true\"> <div ng-messages=\"programTypeDetailsForm.programTypeNameInput.$error\"> <div ng-message=\"required\">A program type name is required.</div> </div> </md-input-container> <md-input-container flex=\"100\" ng-class=\"{ 'no-margin-top' : true }\"> <label>Experience Level</label> <md-select ng-class=\"{ 'no-margin-top': true, 'padding-top-4': true }\" name=\"programTypeExperienceLevelSelect\" ng-model=\"level\" placeholder=\"Experience Level\" required md-no-asterisk=\"true\"> <md-option ng-repeat=\"experienceLevel in levels\" ng-selected=\"level.id === experienceLevel.id\" ng-value=\"experienceLevel\">{{experienceLevel.name}}</md-option> </md-select> <div ng-messages=\"programTypeExerciseForm.programTypeExerciseTypeSelect.$error\"> <div ng-message=\"required\">An exercise type is required.</div> </div> </md-input-container> <md-input-container flex=\"100\" ng-class=\"{ 'no-margin-top' : true, 'margin-bottom-8' : true }\"> <label>Description</label> <textarea name=\"programTypeDescriptionInput\" ng-model=\"description\">\r" +
     "\n" +
     "                </textarea></md-input-container> </form> </md-card-content> </md-card> </div>"
   );
 
 
-  $templateCache.put('scripts/directives/addProgramType/addProgramTypeSetView.html',
-    "<div layout=\"column\" ng-class=\"{ 'no-padding-right': true, 'no-padding-left': true, 'no-padding-bottom': true }\" layout-padding> <span class=\"md-subhead\">Sets</span> <md-divider></md-divider> <md-list ng-if=\"hasConfirmed()\" flex> <md-list-item class=\"md-2-line secondary-button-padding\" ng-repeat=\"set in programTypeSets\" ng-if=\"set.confirmed === true\"> <div class=\"md-list-item-text\" layout=\"column\"> <h3>Exercise: {{set.exercise.name}}</h3> <span ng-if=\"set.exercise.exerciseType.id === 0 || set.exercise.exerciseType.id === 1\"> <h4>Sets: {{set.numberOfSets}}, Reps: {{set.numberOfReps}}</h4> </span> <span ng-if=\"set.exercise.exerciseType.id === 2\"> <h4>Duration: {{set.duration}}</h4> </span> </div> <div layout=\"row\" class=\"md-secondary\"> <md-button class=\"md-fab md-mini\" ng-click=\"editSet(set)\" md-colors=\"{ background: 'orange-300' }\" aria-label=\"Edit\"> <md-icon md-svg-src=\"images/icons/edit.svg\"></md-icon> </md-button> <md-button class=\"md-fab md-mini\" ng-click=\"removeSet(set)\" md-colors=\"{ background: 'red-300' }\" aria-label=\"Remove\"> <md-icon md-svg-src=\"images/icons/remove.svg\"></md-icon> </md-button> </div> </md-list-item> </md-list> <span ng-repeat=\"set in programTypeSets\" ng-if=\"set.confirmed === false\" ng-class=\"{ 'no-padding-right': true, 'no-padding-left': true }\"> <form name=\"programTypeSetForm\" layout=\"column\" ng-class=\"{ 'no-padding-bottom': true }\"> <md-input-container ng-class=\"{ 'no-margin-top': true }\" flex=\"100\"> <md-select name=\"programTypeSetExerciseSelect\" ng-model=\"set.exercise\" placeholder=\"Exercise\" required md-no-asterisk=\"true\"> <md-option ng-repeat=\"exercise in exercises | filter:removeNonComplete\" ng-selected=\"set.exercise.id === exercise.id\" ng-value=\"exercise\">{{exercise.name}}</md-option> </md-select> <div ng-messages=\"programTypeSetForm.programTypeSetExerciseSelect.$error\"> <div ng-message=\"required\">An exercise is required.</div> </div> </md-input-container> <!-- Number of Sets --> <md-input-container ng-class=\"{ 'no-margin-top': true, 'no-margin-bottom': true, 'padding-bottom-8': true }\" flex=\"100\" ng-if=\"set.exercise.exerciseType.id === 0 || set.exercise.exerciseType.id === 1\"> <label>Number of Sets</label> <input name=\"programTypeSetNumberOfSetsInput\" ng-model=\"set.numberOfSets\" type=\"number\" min=\"1\" step=\"1\" required md-no-asterisk=\"true\"> <div ng-messages=\"programTypeSetForm.programTypeSetNumberOfSetsInput.$error\"> <div ng-message=\"required\">Number of sets is required.</div> <div ng-message=\"type\">A number is required.</div> <div ng-message=\"min\">A number greater than 1 is required.</div> </div> </md-input-container> <!-- Number of Reps --> <md-input-container ng-class=\"{ 'no-margin-top': true, 'no-margin-bottom': true, 'padding-bottom-8': true }\" flex=\"100\" ng-if=\"set.exercise.exerciseType.id === 0 || set.exercise.exerciseType.id === 1\"> <label>Number of Reps</label> <input name=\"programTypeSetNumberOfRepsInput\" ng-model=\"set.numberOfReps\" type=\"number\" min=\"1\" step=\"1\" required md-no-asterisk=\"true\"> <div ng-messages=\"programTypeSetForm.programTypeSetNumberOfRepsInput.$error\"> <div ng-message=\"required\">Number of reps is required.</div> <div ng-message=\"type\">A number is required.</div> <div ng-message=\"min\">A number greater than 1 is required.</div> </div> </md-input-container> <!-- One Rep Max Percentage --> <md-input-container ng-if=\"set.exercise.exerciseType.id === 0\" ng-class=\"{ 'no-margin-top': true, 'no-margin-bottom': true, 'padding-bottom-8': true }\" flex=\"100\"> <div layout=\"row\"> <div flex=\"grow\"> <label>One Rep Max %</label> <input name=\"programTypeSetOneRepMaxPercentInput\" ng-model=\"set.oneRepMaxPercent\" type=\"number\" min=\"0\" max=\"100\" step=\"1\" required md-no-asterisk=\"true\"> <div ng-messages=\"programTypeSetForm.programTypeSetOneRepMaxPercentInput.$error\"> <div ng-message=\"required\">One rep max is required.</div> <div ng-message=\"type\">A number is required.</div> <div ng-message=\"min\">A number greater than 0 is required.</div> <div ng-message=\"max\">A number less than 100 is required.</div> </div> </div> <div> <help template-url=\"helpAddProgramTypeOneRepMaxUrl\"></help> </div> </div> </md-input-container> <!-- Increment Multiplier --> <md-input-container ng-if=\"set.exercise.exerciseType.id === 0\" ng-class=\"{ 'no-margin-top': true, 'no-margin-bottom': true, 'padding-bottom-8': true }\" flex=\"100\"> <div layout=\"row\"> <div flex=\"grow\"> <label>Increment Multiplier</label> <input name=\"programTypeSetIncrementMultiplierInput\" ng-model=\"set.incrementMultiplier\" type=\"number\" min=\"0\" step=\"1\" required md-no-asterisk=\"true\"> <div ng-messages=\"programTypeSetForm.programTypeSetIncrementMultiplierInput.$error\"> <div ng-message=\"required\">An Increment multiplier is required.</div> <div ng-message=\"type\">A number is required.</div> <div ng-message=\"min\">A number greater than 0 is required.</div> </div> </div> <div> <help template-url=\"helpAddProgramTypeIncrementUrl\"></help> </div> </div> </md-input-container> <!-- Duration --> <div ng-if=\"set.exercise.exerciseType.id === 2\" layout=\"row\"> <!-- Minutes --> <md-input-container ng-class=\"{ 'no-margin-top': true, 'no-margin-bottom': true, 'padding-bottom-8': true }\" flex=\"100\"> <label>Minutes</label> <input name=\"programTypeSetMinutesInput\" ng-model=\"set.minutes\" type=\"number\" min=\"0\" step=\"1\" required md-no-asterisk=\"true\"> <div ng-messages=\"programTypeSetForm.programTypeSetMinutesInput.$error\"> <div ng-message=\"required\">Minutes are required.</div> <div ng-message=\"type\">A number is required.</div> <div ng-message=\"min\">A number greater than 0 is required.</div> </div> </md-input-container> <!-- Seconds --> <md-input-container ng-class=\"{ 'no-margin-top': true, 'no-margin-bottom': true, 'padding-bottom-8': true }\" flex=\"100\"> <label>Seconds</label> <input name=\"programTypeSetSecondsInput\" ng-model=\"set.seconds\" type=\"number\" min=\"0\" max=\"59\" step=\"1\" required md-no-asterisk=\"true\"> <div ng-messages=\"programTypeSetForm.programTypeSetSecondsInput.$error\"> <div ng-message=\"required\">Seconds are required.</div> <div ng-message=\"type\">A number is required.</div> <div ng-message=\"min\">A number greater than 0 is required.</div> <div ng-message=\"max\">A number less than 59 is required.</div> </div> </md-input-container> </div> </form> <add-remove add-function=\"confirmSet(set)\" remove-function=\"removeSet(set)\" invalid-function=\"isInvalid(set)\" name=\"'Set'\"></add-remove> </span> <div layout=\"column\" ng-class=\"{ 'no-padding-bottom': true, 'no-padding-top': true }\" layout-align=\"center center\"> <md-button class=\"md-primary md-raised\" ng-click=\"addSet()\" aria-label=\"Add Set\"> <div layout=\"row\" layout-align=\"center center\"> <md-icon md-svg-src=\"images/icons/add.svg\"></md-icon> <span flex>Set</span> </div> </md-button> </div> </div>"
-  );
-
-
-  $templateCache.put('scripts/directives/addProgramType/addProgramTypeView.html',
-    "<div layout=\"column\"> <add-program-type-header program-type-name=\"programTypeName\" level=\"level\" description=\"description\"></add-program-type-header> <add-program-type-exercise program-type-exercises=\"exercises\"></add-program-type-exercise> <add-program-type-week program-type-weeks=\"weeks\"></add-program-type-week> <add-remove add-function=\"addFunction(programTypeName, level, description, exercises, weeks)\" remove-function=\"removeFunction()\" name=\"'Type'\" invalid-function=\"invalidFunction(programTypeName, level, description, exercises, weeks)\"></add-remove> </div>"
-  );
-
-
-  $templateCache.put('scripts/directives/addProgramType/addProgramTypeWeekView.html',
-    "<div layout=\"column\"> <md-card> <md-card-header> <md-card-header-text>Weeks</md-card-header-text> </md-card-header> <md-card-content ng-class=\"{ 'no-padding-top' : true, 'no-padding-bottom' : true }\"> <div layout=\"column\"> <md-list ng-if=\"hasConfirmed()\" flex> <md-list-item class=\"md-2-line secondary-button-padding\" ng-repeat=\"week in programTypeWeeks\" ng-if=\"week.confirmed === true\"> <div class=\"md-list-item-text\" layout=\"column\"> <h3>Name: {{week.name}}</h3> <h4>Total Days: {{week.days.length}}</h4> </div> <div layout=\"row\" class=\"md-secondary\"> <md-button class=\"md-fab md-mini\" ng-click=\"editWeek(week)\" md-colors=\"{ background: 'orange-300' }\" aria-label=\"Edit\"> <md-icon md-svg-src=\"images/icons/edit.svg\"></md-icon> </md-button> <md-button class=\"md-fab md-mini\" ng-click=\"removeWeek(week)\" md-colors=\"{ background: 'red-300' }\" aria-label=\"Remove\"> <md-icon md-svg-src=\"images/icons/remove.svg\"></md-icon> </md-button> </div> </md-list-item> </md-list> <span ng-repeat=\"week in programTypeWeeks\" ng-if=\"week.confirmed === false\" ng-class=\"{ 'no-padding-right': true, 'no-padding-left': true }\"> <form name=\"programTypeWeekForm\" layout=\"column\"> <md-input-container ng-class=\"{ 'no-margin-top': true, 'no-margin-bottom': true }\" flex=\"100\"> <label>Week Name</label> <input name=\"programTypeWeekNameInput\" ng-model=\"week.name\" required md-no-asterisk=\"true\"> <div ng-messages=\"programTypeWeekForm.programTypeWeekNameInput.$error\"> <div ng-message=\"required\">A week name is required.</div> </div> </md-input-container> </form> <add-program-type-day program-type-days=\"week.days\"></add-program-type-day> <add-remove add-function=\"confirmWeek(week)\" remove-function=\"removeWeek(week)\" invalid-function=\"isInvalid(week)\" name=\"'Week'\"></add-remove> </span> <div ng-class=\"{ 'padding-bottom-8': true }\" layout=\"column\" layout-align=\"center center\"> <md-button class=\"md-primary md-raised\" ng-click=\"addWeek()\" aria-label=\"Add Week\"> <div layout=\"row\" layout-align=\"center center\"> <md-icon md-svg-src=\"images/icons/add.svg\"></md-icon> <span flex>Week</span> </div> </md-button> </div> </div> </md-card-content> </md-card> </div>"
-  );
-
-
-  $templateCache.put('scripts/directives/addProgramType/helpAddProgramTypeExerciseTypeTemplate.html',
+  $templateCache.put('scripts/directives/addProgramType/help/helpAddProgramTypeExerciseTypeTemplate.html',
     "<md-dialog aria-label=\"{{ariaLabel}}\"> <form ng-cloak> <md-dialog-content> <div class=\"md-dialog-content\"> <h3>Exercise Types</h3> <p>There are three types of exercise types.</p> <div layout=\"column\"> <span class=\"padding-bottom-4\"><span class=\"bold-text\">Weighted</span>: exercises that required weight (E.g. Bench Press).</span> <span class=\"padding-bottom-4\"><span class=\"bold-text\">Non-weighted</span>: exercises that do not require weight (E.g. Situps).</span> <span class=\"padding-bottom-4\"><span class=\"bold-text\">Cardio</span>: cardiovascular exercises which require a duration (E.g. Running).</span> </div> </div> </md-dialog-content> <md-dialog-actions layout=\"row\"> <md-button ng-click=\"hideDialog()\">Ok</md-button> </md-dialog-actions> </form> </md-dialog>"
   );
 
 
-  $templateCache.put('scripts/directives/addProgramType/helpAddProgramTypeIncrementTemplate.html',
+  $templateCache.put('scripts/directives/addProgramType/help/helpAddProgramTypeIncrementTemplate.html',
     "<md-dialog aria-label=\"{{ariaLabel}}\"> <form ng-cloak> <md-dialog-content> <div class=\"md-dialog-content\"> <h3>Increment Multiplier</h3> <p>The amount of times an increment will be added to the calculated weight.</p> <div layout=\"column\"> <p>E.g. Bench Press, for 12 reps. Increment of 2.5kgs</p> <span flex>Multiplier of 1: Bench Press weight is 80kgs + 2.5kgs</span> <span flex>Multiplier of 2: Bench Press weight is 80kgs + 5kgs</span> </div> </div> </md-dialog-content> <md-dialog-actions layout=\"row\"> <md-button ng-click=\"hideDialog()\">Ok</md-button> </md-dialog-actions> </form> </md-dialog>"
   );
 
 
-  $templateCache.put('scripts/directives/addProgramType/helpAddProgramTypeOneRepMaxTemplate.html',
+  $templateCache.put('scripts/directives/addProgramType/help/helpAddProgramTypeOneRepMaxTemplate.html',
     "<md-dialog aria-label=\"{{ariaLabel}}\"> <form ng-cloak> <md-dialog-content> <div class=\"md-dialog-content\"> <h3>One Rep Max Percent</h3> <p>A percentage of the one rep max that determines the weight to be used.</p> </div> </md-dialog-content> <md-dialog-actions layout=\"row\"> <md-button ng-click=\"hideDialog()\">Ok</md-button> </md-dialog-actions> </form> </md-dialog>"
   );
 
 
-  $templateCache.put('scripts/directives/addProgramType/helpAddProgramTypeTemplate.html',
+  $templateCache.put('scripts/directives/addProgramType/help/helpAddProgramTypeTemplate.html',
     "<md-dialog aria-label=\"{{ariaLabel}}\"> <form ng-cloak> <md-dialog-content> <div class=\"md-dialog-content\"> <h3>Add Program Type</h3> <p>A program type is a scaffold outlining the weeks, days, sets and exercises for a custom fitness program.</p> <p>Once created the program type can be used to generate multiple programs.</p> </div> </md-dialog-content> <md-dialog-actions layout=\"row\"> <md-button ng-click=\"hideDialog()\">Ok</md-button> </md-dialog-actions> </form> </md-dialog>"
+  );
+
+
+  $templateCache.put('scripts/directives/addProgramType/set/addProgramTypeSetView.html',
+    "<div layout=\"column\" ng-class=\"{ 'no-padding-right': true, 'no-padding-left': true, 'no-padding-bottom': true }\" layout-padding> <span class=\"md-subhead\">Sets</span> <md-divider></md-divider> <md-list ng-if=\"hasConfirmed()\" flex> <md-list-item class=\"md-2-line secondary-button-padding\" ng-repeat=\"set in programTypeSets\" ng-if=\"set.confirmed === true\"> <div class=\"md-list-item-text\" layout=\"column\"> <h3>Set type: {{set.setType.name}}</h3> <h4>Exercises: {{set.exercises.length}}, Sets: {{set.numberOfSets}}</h4> </div> <div layout=\"row\" class=\"md-secondary\"> <md-button class=\"md-fab md-mini\" ng-click=\"editSet(set)\" md-colors=\"{ background: 'orange-300' }\" aria-label=\"Edit\"> <md-icon md-svg-src=\"images/icons/edit.svg\"></md-icon> </md-button> <md-button class=\"md-fab md-mini\" ng-click=\"removeSet(set)\" md-colors=\"{ background: 'red-300' }\" aria-label=\"Remove\"> <md-icon md-svg-src=\"images/icons/remove.svg\"></md-icon> </md-button> </div> </md-list-item> </md-list> <span ng-repeat=\"set in programTypeSets\" ng-if=\"set.confirmed === false\" ng-class=\"{ 'no-padding-right': true, 'no-padding-left': true }\"> <add-program-type-set-type set-type=\"set.setType\"></add-program-type-set-type> <add-program-type-set-type-normal ng-if=\"set.setType.id === 0\" exercises=\"exercises\" set=\"set\"></add-program-type-set-type-normal> <add-program-type-set-type-superset ng-if=\"set.setType.id === 1\" exercises=\"exercises\" set=\"set\"></add-program-type-set-type-superset> <add-remove add-function=\"confirmSet(set)\" remove-function=\"removeSet(set)\" invalid-function=\"isInvalid(set)\" name=\"'Set'\"></add-remove> </span> <div layout=\"column\" ng-class=\"{ 'no-padding-bottom': true, 'no-padding-top': true }\" layout-align=\"center center\"> <md-button class=\"md-primary md-raised\" ng-click=\"addSet()\" aria-label=\"Add Set\"> <div layout=\"row\" layout-align=\"center center\"> <md-icon md-svg-src=\"images/icons/add.svg\"></md-icon> <span flex>Set</span> </div> </md-button> </div> </div>"
+  );
+
+
+  $templateCache.put('scripts/directives/addProgramType/set/exerciseType/addProgramTypeSetExerciseCardioView.html',
+    "<div layout=\"column\"> <form name=\"addProgramTypeSetExerciseCardioForm\" layout=\"column\" class=\"no-padding-bottom\"> <div layout=\"row\"> <!-- Minutes --> <md-input-container class=\"no-margin-bottom no-margin-top\" flex=\"100\"> <label>Minutes</label> <input name=\"programTypeSetMinutesInput\" ng-model=\"setExercise.minutes\" type=\"number\" min=\"0\" step=\"1\" required md-no-asterisk=\"true\"> <div ng-messages=\"addProgramTypeSetExerciseCardioForm.programTypeSetMinutesInput.$error\"> <div ng-message=\"required\">Minutes are required.</div> <div ng-message=\"type\">A number is required.</div> <div ng-message=\"min\">A number greater than 0 is required.</div> </div> </md-input-container> <!-- Seconds --> <md-input-container class=\"no-margin-bottom no-margin-top\" flex=\"100\"> <label>Seconds</label> <input name=\"programTypeSetSecondsInput\" ng-model=\"setExercise.seconds\" type=\"number\" min=\"0\" max=\"59\" step=\"1\" required md-no-asterisk=\"true\"> <div ng-messages=\"addProgramTypeSetExerciseCardioForm.programTypeSetSecondsInput.$error\"> <div ng-message=\"required\">Seconds are required.</div> <div ng-message=\"type\">A number is required.</div> <div ng-message=\"min\">A number greater than 0 is required.</div> <div ng-message=\"max\">A number less than 59 is required.</div> </div> </md-input-container> </div> </form> </div>"
+  );
+
+
+  $templateCache.put('scripts/directives/addProgramType/set/exerciseType/addProgramTypeSetExerciseNonWeightedView.html',
+    "<div layout=\"column\"> <form name=\"addProgramTypeSetExerciseNonWeightedForm\" layout=\"column\" class=\"no-padding-bottom\"> <!-- Numner of reps --> <md-input-container class=\"no-margin-bottom no-margin-top\"> <label>Number of Reps</label> <input name=\"numberOfRepsInput\" ng-model=\"setExercise.numberOfReps\" type=\"number\" min=\"0\" step=\"1\" required md-no-asterisk=\"true\"> <div ng-messages=\"addProgramTypeSetExerciseNonWeightedForm.numberOfRepsInput.$error\"> <div ng-message=\"required\">Number of reps are required.</div> <div ng-message=\"min\">Must be greater than 0.</div> </div> </md-input-container> </form> </div>"
+  );
+
+
+  $templateCache.put('scripts/directives/addProgramType/set/exerciseType/addProgramTypeSetExerciseWeightedView.html',
+    "<div layout=\"column\"> <form name=\"addProgramTypeSetExerciseWeightedForm\" layout=\"column\" class=\"no-padding-bottom\"> <!-- Numner of reps --> <md-input-container class=\"no-margin-bottom no-margin-top\"> <label>Number of Reps</label> <input name=\"numberOfRepsInput\" ng-model=\"setExercise.numberOfReps\" type=\"number\" min=\"0\" step=\"1\" required md-no-asterisk=\"true\"> <div ng-messages=\"addProgramTypeSetExerciseWeightedForm.numberOfRepsInput.$error\"> <div ng-message=\"required\">Number of reps are required.</div> <div ng-message=\"min\">Must be greater than 0.</div> </div> </md-input-container> <!-- ORM --> <md-input-container class=\"no-margin-bottom no-margin-top\"> <label>One Rep Max %</label> <input name=\"oneRepMaxInput\" ng-model=\"setExercise.oneRepMaxPercentage\" type=\"number\" min=\"0\" max=\"100\" required md-no-asterisk=\"true\"> <div ng-messages=\"addProgramTypeSetExerciseWeightedForm.oneRepMaxInput.$error\"> <div ng-message=\"required\">A one rep max is required.</div> <div ng-message=\"min\">Must be greater than 0.</div> <div ng-message=\"max\">Must be less than 100.</div> </div> </md-input-container> <!-- Increment Multiplier --> <md-input-container class=\"no-margin-bottom no-margin-top\"> <label>Increment Multiplier</label> <input name=\"incrementMultiplierInput\" ng-model=\"setExercise.incrementMultiplier\" type=\"number\" min=\"0\" required md-no-asterisk=\"true\"> <div ng-messages=\"addProgramTypeSetExerciseWeightedForm.incrementMultiplierInput.$error\"> <div ng-message=\"required\">An increment multiplier is required.</div> <div ng-message=\"min\">Must be greater than 0.</div> </div> </md-input-container> </form> </div>"
+  );
+
+
+  $templateCache.put('scripts/directives/addProgramType/set/setInformation/addProgramTypeSetExerciseSelectView.html',
+    "<div layout=\"column\"> <form name=\"addProgramTypeSetExerciseSelectForm\" layout=\"column\" class=\"no-padding-bottom\"> <md-input-container class=\"no-margin-bottom no-margin-top\"> <md-select ng-model=\"exercise\" placeholder=\"Exercise\" aria-label=\"Exercise Select\"> <md-option ng-repeat=\"ex in exercises\" ng-selected=\"exercise.id === ex.id\" ng-value=\"ex\">{{ex.name}}</md-option> </md-select> </md-input-container> </form> </div>"
+  );
+
+
+  $templateCache.put('scripts/directives/addProgramType/set/setInformation/addProgramTypeSetNumberOfSetsView.html',
+    "<div layout=\"column\"> <form name=\"addProgramTypeSetNumberOfSetsForm\" layout=\"column\"> <md-input-container class=\"no-margin-top no-margin-bottom\"> <label>Number of Sets</label> <input name=\"numberOfSetsInput\" ng-model=\"numberOfSets\" type=\"number\" min=\"0\" step=\"1\" required md-no-asterisk=\"true\"> <div ng-messages=\"addProgramTypeSetNumberOfSetsForm.numberOfSetsInput.$error\"> <div ng-message=\"required\">Number of sets are required.</div> <div ng-message=\"min\">Must be greater than 0.</div> </div> </md-input-container> </form> </div>"
+  );
+
+
+  $templateCache.put('scripts/directives/addProgramType/set/setInformation/addProgramTypeSetTypeView.html',
+    "<div layout=\"column\"> <form name=\"addProgramTypeSetTypeForm\" layout=\"column\" class=\"no-padding-bottom\"> <md-input-container> <md-select ng-model=\"setType\" aria-label=\"Set Type Select\"> <md-option ng-repeat=\"type in setTypes\" ng-selected=\"setType.id === type.id\" ng-value=\"type\">{{type.name}}</md-option> </md-select> </md-input-container> </form> </div>"
+  );
+
+
+  $templateCache.put('scripts/directives/addProgramType/set/setType/addProgramTypeSetTypeNormalView.html',
+    "<div layout=\"column\"> <add-program-type-set-exercise-select class=\"padding-bottom-8\" exercises=\"exercises\" exercise=\"set.exercises[0].exercise\"></add-program-type-set-exercise-select> <add-program-type-set-number-of-sets class=\"padding-top-8\" number-of-sets=\"set.numberOfSets\"></add-program-type-set-number-of-sets> <add-program-type-set-exercise-weighted ng-if=\"set.exercises[0].exercise.exerciseType.id === 0\" set-exercise=\"set.exercises[0]\"></add-program-type-set-exercise-weighted> <add-program-type-set-exercise-non-weighted ng-if=\"set.exercises[0].exercise.exerciseType.id === 1\" set-exercise=\"set.exercises[0]\"></add-program-type-set-exercise-non-weighted> <add-program-type-set-exercise-cardio ng-if=\"set.exercises[0].exercise.exerciseType.id === 2\" set-exercise=\"set.exercises[0]\"></add-program-type-set-exercise-cardio> </div>"
+  );
+
+
+  $templateCache.put('scripts/directives/addProgramType/set/setType/addProgramTypeSetTypeSupersetView.html',
+    "<div layout=\"column\"> <add-program-type-set-number-of-sets class=\"padding-top-8\" number-of-sets=\"set.numberOfSets\"></add-program-type-set-number-of-sets> <md-list ng-if=\"hasConfirmed()\" flex> <md-list-item class=\"md-2-line secondary-button-padding\" ng-repeat=\"exer in set.exercises\" ng-if=\"exer.confirmed === true\"> <div class=\"md-list-item-text\" layout=\"column\"> <h3>Exercise: {{exer.exercise.name}}</h3> <h4>Type: {{exer.exercise.exerciseType.name}}</h4> <span ng-if=\"exer.exercise.exerciseType.id === 0 || exer.exercise.exerciseType.id === 1\"> <h4>Reps: {{exer.numberOfReps}}</h4> </span> <span ng-if=\"exer.exercise.exerciseType.id === 2\"> <h4>Duration: {{exer.duration}}</h4> </span> </div> <div layout=\"row\" class=\"md-secondary\"> <md-button class=\"md-fab md-mini\" ng-click=\"editSetExercise(exer)\" md-colors=\"{ background: 'orange-300' }\" aria-label=\"Edit\"> <md-icon md-svg-src=\"images/icons/edit.svg\"></md-icon> </md-button> <md-button class=\"md-fab md-mini\" ng-click=\"removeSetExercise(exer)\" md-colors=\"{ background: 'red-300' }\" aria-label=\"Remove\"> <md-icon md-svg-src=\"images/icons/remove.svg\"></md-icon> </md-button> </div> </md-list-item> </md-list> <span layout=\"column\" ng-repeat=\"exer in set.exercises\" ng-if=\"exer.confirmed === false\" class=\"no-padding-right no-padding-left padding-bottom-8\"> <add-program-type-set-exercise-select class=\"padding-bottom-8\" exercises=\"exercises\" exercise=\"exer.exercise\"></add-program-type-set-exercise-select> <add-program-type-set-exercise-weighted ng-if=\"exer.exercise.exerciseType.id === 0\" class=\"padding-top-8\" set-exercise=\"exer\"></add-program-type-set-exercise-weighted> <add-program-type-set-exercise-non-weighted ng-if=\"exer.exercise.exerciseType.id === 1\" class=\"padding-top-8\" set-exercise=\"exer\"></add-program-type-set-exercise-non-weighted> <add-program-type-set-exercise-cardio ng-if=\"exer.exercise.exerciseType.id === 2\" class=\"padding-top-8 padding-bottom-8\" set-exercise=\"exer\"></add-program-type-set-exercise-cardio> <add-remove add-function=\"confirmSetExercise(exer)\" remove-function=\"removeSetExercise(exer)\" invalid-function=\"isInvalid(exer)\" name=\"'Superset'\"></add-remove> </span> <div layout=\"column\" class=\"no-padding-bottom no-padding-top\" layout-align=\"center center\"> <md-button class=\"md-primary md-raised\" ng-click=\"addSuperset()\" aria-label=\"Add Superset\"> <div layout=\"row\" layout-align=\"center center\"> <md-icon md-svg-src=\"images/icons/add.svg\"></md-icon> <span flex>Superset</span> </div> </md-button> </div> </div>"
+  );
+
+
+  $templateCache.put('scripts/directives/addProgramType/week/addProgramTypeWeekView.html',
+    "<div layout=\"column\"> <md-card> <md-card-header> <md-card-header-text>Weeks</md-card-header-text> </md-card-header> <md-card-content ng-class=\"{ 'no-padding-top' : true, 'no-padding-bottom' : true }\"> <div layout=\"column\"> <md-list ng-if=\"hasConfirmed()\" flex> <md-list-item class=\"md-2-line secondary-button-padding\" ng-repeat=\"week in programTypeWeeks\" ng-if=\"week.confirmed === true\"> <div class=\"md-list-item-text\" layout=\"column\"> <h3>Name: {{week.name}}</h3> <h4>Total Days: {{week.days.length}}</h4> </div> <div layout=\"row\" class=\"md-secondary\"> <md-button class=\"md-fab md-mini\" ng-click=\"editWeek(week)\" md-colors=\"{ background: 'orange-300' }\" aria-label=\"Edit\"> <md-icon md-svg-src=\"images/icons/edit.svg\"></md-icon> </md-button> <md-button class=\"md-fab md-mini\" ng-click=\"removeWeek(week)\" md-colors=\"{ background: 'red-300' }\" aria-label=\"Remove\"> <md-icon md-svg-src=\"images/icons/remove.svg\"></md-icon> </md-button> </div> </md-list-item> </md-list> <span ng-repeat=\"week in programTypeWeeks\" ng-if=\"week.confirmed === false\" ng-class=\"{ 'no-padding-right': true, 'no-padding-left': true }\"> <form name=\"programTypeWeekForm\" layout=\"column\"> <md-input-container ng-class=\"{ 'no-margin-top': true, 'no-margin-bottom': true }\" flex=\"100\"> <label>Week Name</label> <input name=\"programTypeWeekNameInput\" ng-model=\"week.name\" required md-no-asterisk=\"true\"> <div ng-messages=\"programTypeWeekForm.programTypeWeekNameInput.$error\"> <div ng-message=\"required\">A week name is required.</div> </div> </md-input-container> </form> <add-program-type-day program-type-days=\"week.days\"></add-program-type-day> <add-remove add-function=\"confirmWeek(week)\" remove-function=\"removeWeek(week)\" invalid-function=\"isInvalid(week)\" name=\"'Week'\"></add-remove> </span> <div ng-class=\"{ 'padding-bottom-8': true }\" layout=\"column\" layout-align=\"center center\"> <md-button class=\"md-primary md-raised\" ng-click=\"addWeek()\" aria-label=\"Add Week\"> <div layout=\"row\" layout-align=\"center center\"> <md-icon md-svg-src=\"images/icons/add.svg\"></md-icon> <span flex>Week</span> </div> </md-button> </div> </div> </md-card-content> </md-card> </div>"
   );
 
 
@@ -7443,7 +4285,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('scripts/directives/quickComplete/quickCompleteView.html',
-    "<div layout=\"column\"> <md-card class=\"quickcomplete\" ng-if=\"defined()\"> <md-card-header class=\"no-padding-right\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header-text layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <span class=\"font-weight-600\">{{quickCompleteProgram.name}}</span> <span flex=\"nogrow\">{{week.name}} | {{day.name}}</span> </div> </md-card-header-text> <help template-url=\"helpTemplateUrl\"></help> </md-card-header> <md-card-content> <div layout=\"row\"> <div layout=\"column\" flex=\"grow\"> <span class=\"margin-bottom-8 font-weight-600\">{{exercise}}</span> <span>{{setInformation}}</span> </div> <div layout=\"column\" layout-align=\"center center\" flex=\"nogrow\"> <md-checkbox class=\"no-margin\" ng-model=\"set.complete\" ng-change=\"calculatePercentageComplete()\" aria-label=\"complete set\" flex=\"nogrow\"></md-checkbox> </div> </div> </md-card-content> <md-progress-linear ng-if=\"quickCompleteProgram.percentComplete >= 0\" md-mode=\"determinate\" value=\"{{quickCompleteProgram.percentComplete}}\"></md-progress-linear> </md-card> <md-card class=\"quickcomplete\" ng-if=\"!defined()\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header class=\"no-padding-right\"> <md-card-header-text layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <span class=\"font-weight-600\">No most recent program</span> </div> </md-card-header-text> <help template-url=\"helpTemplateUrl\"></help> </md-card-header> </md-card> </div>"
+    "<div layout=\"column\"> <md-card ng-if=\"defined()\"> <md-card-header class=\"no-padding-right\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header-text layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <span class=\"font-weight-600\">{{quickCompleteProgram.name}}</span> <span>{{week.name}} | {{day.name}}</span> <span flex=\"nogrow\">{{set.numberOfSets}} sets</span> </div> </md-card-header-text> <md-checkbox class=\"no-margin\" ng-model=\"set.complete\" ng-change=\"calculatePercentageComplete()\" aria-label=\"complete set\" flex=\"nogrow\"></md-checkbox> <help template-url=\"helpTemplateUrl\"></help> </md-card-header> <md-progress-linear ng-if=\"quickCompleteProgram.percentComplete >= 0\" md-mode=\"determinate\" value=\"{{quickCompleteProgram.percentComplete}}\"></md-progress-linear> <md-card-content class=\"no-padding-top no-padding-bottom no-padding-left no-padding-right\"> <md-list> <span class=\"body-list-item\"> <md-list-item class=\"md-2-line\" ng-repeat=\"setExercise in exercises\" flex> <div ng-if=\"setExercise.exercise.exerciseType.id === 0\" class=\"md-list-item-text\" flex> <h3 flex>{{setExercise.exercise.name}}</h3> <p>{{setExercise.numberOfReps}} reps at {{setExercise.weight}}{{unit.textName}}</p> </div> <div ng-if=\"setExercise.exercise.exerciseType.id === 1\" class=\"md-list-item-text\"> <h3 flex>{{setExercise.exercise.name}}</h3> <p>{{setExercise.numberOfReps}} reps</p> </div> <div ng-if=\"setExercise.exercise.exerciseType.id === 2\" class=\"md-list-item-text\"> <h3 flex>{{setExercise.exercise.name}}</h3> <p>Duration: {{setExercise.duration}}</p> </div> </md-list-item> </span> </md-list> </md-card-content> </md-card> <md-card class=\"quickcomplete\" ng-if=\"!defined()\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header class=\"no-padding-right\"> <md-card-header-text layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <span class=\"font-weight-600\">No most recent program</span> </div> </md-card-header-text> <help template-url=\"helpTemplateUrl\"></help> </md-card-header> </md-card> </div>"
   );
 
 
@@ -7498,7 +4340,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('views/programInformation.html',
-    "<div layout=\"column\" layout-padding> <div layout=\"column\"> <span ng-if=\"program !== undefined\" flex> <!-- HEADER --> <md-list> <md-list-item class=\"md-3-line background-white margin-bottom-10 no-padding-left no-padding-right\" md-whiteframe=\"2\"> <div class=\"padding-top-24 padding-bottom-16 padding-right-16 padding-left-16\" layout=\"row\" flex=\"100\"> <div layout=\"column\" flex> <div layout=\"column\" flex> <p class=\"list-text headline truncate-text\">{{program.name}}</p> <p class=\"list-text subhead truncate-text\">Total Weeks: {{program.weeks.length}}</p> <p class=\"list-text subhead truncate-text\">Increment: {{program.increment}}{{unit.textName}}</p> </div> </div> <div layout=\"row\" flex=\"none\" layout-align=\"center start\"> <md-button class=\"md-icon-button\" md-colors=\"{ background: 'orange-300' }\" ng-click=\"editFunction(program)\" aria-label=\"Edit\"> <md-icon md-svg-src=\"images/icons/edit.svg\"></md-icon> </md-button> <md-button class=\"md-icon-button\" md-colors=\"{ background: 'red-300' }\" class=\"md-raised\" ng-click=\"removeFunction(program)\" aria-label=\"Remove\"> <md-icon md-svg-src=\"images/icons/remove.svg\"></md-icon> </md-button> </div> </div> <md-progress-linear class=\"list-progress\" md-mode=\"determinate\" value=\"{{program.percentComplete}}\"></md-progress-linear> </md-list-item> </md-list> <!-- BODY --> <md-expansion-panel-group> <md-expansion-panel ng-repeat=\"week in program.weeks\"> <md-expansion-panel-collapsed> <div class=\"md-title\">{{week.name}}</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-collapsed> <md-expansion-panel-expanded> <md-expansion-panel-header ng-click=\"$panel.collapse()\"> <div class=\"md-title\">{{week.name}}</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-header> <md-expansion-panel-content> <md-list ng-class=\"{ 'no-padding-top': true, 'no-padding-bottom': true }\" ng-repeat=\"day in week.days\" flex> <p class=\"no-margin-top\">{{day.name}}</p> <md-divider></md-divider> <md-list-item class=\"md-3-line\" ng-repeat=\"set in day.sets\" flex> <div ng-if=\"set.exercise.exerciseType.id === 0\" class=\"md-list-item-text\" flex> <h3 flex>{{set.exercise.name}}</h3> <p>{{set.numberOfSets}} sets by {{set.numberOfReps}} reps at {{set.weight}}{{unit.textName}}</p> <p>Increment Multiplier: {{set.incrementMultiplier}}</p> </div> <div ng-if=\"set.exercise.exerciseType.id === 1\" class=\"md-list-item-text\"> <h3 flex>{{set.exercise.name}}</h3> <p>{{set.numberOfSets}} sets by {{set.numberOfReps}} reps</p> </div> <div ng-if=\"set.exercise.exerciseType.id === 2\" class=\"md-list-item-text\"> <h3 flex>{{set.exercise.name}}</h3> <p>Duration: {{set.duration}}</p> </div> <md-checkbox class=\"md-secondary\" ng-model=\"set.complete\" ng-change=\"calculatePercentageComplete()\" aria-label=\"Complete Set\"></md-checkbox> </md-list-item> </md-list> </md-expansion-panel-content> </md-expansion-panel-expanded> </md-expansion-panel> </md-expansion-panel-group> </span> </div> </div>"
+    "<div layout=\"column\" layout-padding> <div layout=\"column\"> <span ng-if=\"program !== undefined\" flex> <!-- HEADER --> <md-list> <md-list-item class=\"md-3-line background-white margin-bottom-10 no-padding-left no-padding-right\" md-whiteframe=\"2\"> <div class=\"padding-top-24 padding-bottom-16 padding-right-16 padding-left-16\" layout=\"row\" flex=\"100\"> <div layout=\"column\" flex> <div layout=\"column\" flex> <p class=\"list-text headline truncate-text\">{{program.name}}</p> <p class=\"list-text subhead truncate-text\">Total Weeks: {{program.weeks.length}}</p> <p class=\"list-text subhead truncate-text\">Increment: {{program.increment}}{{unit.textName}}</p> </div> </div> <div layout=\"row\" flex=\"none\" layout-align=\"center start\"> <md-button class=\"md-icon-button\" md-colors=\"{ background: 'orange-300' }\" ng-click=\"editFunction(program)\" aria-label=\"Edit\"> <md-icon md-svg-src=\"images/icons/edit.svg\"></md-icon> </md-button> <md-button class=\"md-icon-button\" md-colors=\"{ background: 'red-300' }\" class=\"md-raised\" ng-click=\"removeFunction(program)\" aria-label=\"Remove\"> <md-icon md-svg-src=\"images/icons/remove.svg\"></md-icon> </md-button> </div> </div> <md-progress-linear class=\"list-progress\" md-mode=\"determinate\" value=\"{{program.percentComplete}}\"></md-progress-linear> </md-list-item> </md-list> <!-- BODY --> <md-expansion-panel-group> <md-expansion-panel ng-repeat=\"week in program.weeks\"> <md-expansion-panel-collapsed> <div class=\"md-title\">{{week.name}}</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-collapsed> <md-expansion-panel-expanded> <md-expansion-panel-header ng-click=\"$panel.collapse()\"> <div class=\"md-title\">{{week.name}}</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-header> <md-expansion-panel-content> <md-list class=\"no-padding-top no-padding-bottom\" ng-repeat=\"day in week.days\" flex> <p class=\"no-margin-top\">{{day.name}}</p> <md-divider></md-divider> <span ng-repeat=\"set in day.sets\"> <span class=\"header-list-item\"> <md-list-item class=\"md-2-line\" md-colors=\"{ background: 'primary-50' }\" flex> <div class=\"md-list-item-text\"> <h3 flex>Set type: {{set.setType.name}}</h3> <p>Number of sets: {{set.numberOfSets}}</p> </div> <md-checkbox class=\"md-secondary\" ng-model=\"set.complete\" ng-change=\"calculatePercentageComplete()\" aria-label=\"Complete Set\"></md-checkbox> </md-list-item> </span> <span class=\"body-list-item\"> <md-list-item class=\"md-2-line\" ng-repeat=\"setExercise in set.exercises\" flex> <div ng-if=\"setExercise.exercise.exerciseType.id === 0\" class=\"md-list-item-text\" flex> <h3 flex>{{setExercise.exercise.name}}</h3> <p>{{setExercise.numberOfReps}} reps at {{setExercise.weight}}{{unit.textName}}</p> </div> <div ng-if=\"setExercise.exercise.exerciseType.id === 1\" class=\"md-list-item-text\"> <h3 flex>{{setExercise.exercise.name}}</h3> <p>{{setExercise.numberOfReps}} reps</p> </div> <div ng-if=\"setExercise.exercise.exerciseType.id === 2\" class=\"md-list-item-text\"> <h3 flex>{{setExercise.exercise.name}}</h3> <p>Duration: {{setExercise.duration}}</p> </div> </md-list-item> </span> <md-divider></md-divider> </span> </md-list> </md-expansion-panel-content> </md-expansion-panel-expanded> </md-expansion-panel> </md-expansion-panel-group> </span> </div> </div>"
   );
 
 
@@ -7508,7 +4350,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('views/programTypeInformation.html',
-    "<div layout=\"column\" layout-padding> <div layout=\"column\"> <span ng-if=\"programType !== undefined\" flex> <!-- HEADER --> <md-list> <md-list-item class=\"md-3-line background-white margin-bottom-10 no-padding-left no-padding-right\" md-whiteframe=\"2\"> <div class=\"padding-top-24 padding-bottom-16 padding-right-16 padding-left-16\" layout=\"row\" flex=\"100\"> <div layout=\"column\" flex> <div layout=\"column\" flex> <p class=\"list-text headline truncate-text\">{{programType.programTypeName}}</p> <p ng-if=\"programType.level\" class=\"list-text subhead truncate-text\">Experience Level: {{programType.level.name}}</p> <p class=\"list-text subhead truncate-text\">Total Weeks: {{programType.weeks.length}}, Total Sets: {{programType.totalNumberOfSets}}</p> </div> </div> <div layout=\"row\" flex=\"none\" layout-align=\"center start\"> <md-button class=\"md-icon-button\" md-colors=\"{ background: 'orange-300' }\" ng-click=\"editFunction(programType)\" aria-label=\"Edit\"> <md-icon md-svg-src=\"images/icons/edit.svg\"></md-icon> </md-button> <md-button ng-if=\"programType.removable\" class=\"md-icon-button\" md-colors=\"{ background: 'red-300' }\" class=\"md-raised\" ng-click=\"removeFunction(programType)\" aria-label=\"Remove\"> <md-icon md-svg-src=\"images/icons/remove.svg\"></md-icon> </md-button> </div> </div> </md-list-item> </md-list> <!-- BODY --> <md-expansion-panel-group> <!-- Description --> <md-expansion-panel ng-if=\"programType.description && programType.description.length > 0\"> <md-expansion-panel-collapsed> <div class=\"md-title\">Description</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-collapsed> <md-expansion-panel-expanded> <md-expansion-panel-header ng-click=\"$panel.collapse()\"> <div class=\"md-title\">Description</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-header> <md-expansion-panel-content> <p>{{programType.description}}</p> </md-expansion-panel-content> </md-expansion-panel-expanded> </md-expansion-panel> <!-- Exercises --> <md-expansion-panel> <md-expansion-panel-collapsed> <div class=\"md-title\">Exercises</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-collapsed> <md-expansion-panel-expanded> <md-expansion-panel-header ng-click=\"$panel.collapse()\"> <div class=\"md-title\">Exercises</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-header> <md-expansion-panel-content> <md-list ng-class=\"{ 'no-padding-top': true, 'no-padding-bottom': true }\" ng-repeat=\"exercise in programType.exercises\" flex> <md-list-item class=\"md-2-line\" flex> <div class=\"md-list-item-text\" flex> <h3 flex>{{exercise.name}}</h3> <p>Type: {{exercise.exerciseType.name}}</p> </div> </md-list-item> <md-divider ng-if=\"!$last\"></md-divider> </md-list> </md-expansion-panel-content> </md-expansion-panel-expanded> </md-expansion-panel> <!-- Weeks --> <md-expansion-panel ng-repeat=\"week in programType.weeks\"> <md-expansion-panel-collapsed> <div class=\"md-title\">{{week.name}}</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-collapsed> <md-expansion-panel-expanded> <md-expansion-panel-header ng-click=\"$panel.collapse()\"> <div class=\"md-title\">{{week.name}}</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-header> <md-expansion-panel-content> <md-list ng-repeat=\"day in week.days\" flex> <p class=\"no-margin-top\">{{day.name}}</p> <md-divider></md-divider> <md-list-item class=\"md-3-line\" ng-repeat=\"set in day.sets\" flex> <div ng-if=\"set.exercise.exerciseType.id === 0\" class=\"md-list-item-text\" flex> <h3 flex>{{set.exercise.name}}</h3> <p>{{set.numberOfSets}} sets by {{set.numberOfReps}} reps at {{set.oneRepMaxPercent}}% ORM</p> <p>Increment Multiplier: {{set.incrementMultiplier}}</p> </div> <div ng-if=\"set.exercise.exerciseType.id === 1\" class=\"md-list-item-text\"> <h3 flex>{{set.exercise.name}}</h3> <p>{{set.numberOfSets}} sets by {{set.numberOfReps}} reps</p> </div> <div ng-if=\"set.exercise.exerciseType.id === 2\" class=\"md-list-item-text\"> <h3 flex>{{set.exercise.name}}</h3> <p>Duration: {{set.duration}}</p> </div> </md-list-item> </md-list> </md-expansion-panel-content> </md-expansion-panel-expanded> </md-expansion-panel> </md-expansion-panel-group> </span> </div> </div>"
+    "<div layout=\"column\" layout-padding> <div layout=\"column\"> <span ng-if=\"programType !== undefined\" flex> <!-- HEADER --> <md-list> <md-list-item class=\"md-3-line background-white margin-bottom-10 no-padding-left no-padding-right\" md-whiteframe=\"2\"> <div class=\"padding-top-24 padding-bottom-16 padding-right-16 padding-left-16\" layout=\"row\" flex=\"100\"> <div layout=\"column\" flex> <div layout=\"column\" flex> <p class=\"list-text headline truncate-text\">{{programType.programTypeName}}</p> <p ng-if=\"programType.level\" class=\"list-text subhead truncate-text\">Experience Level: {{programType.level.name}}</p> <p class=\"list-text subhead truncate-text\">Total Weeks: {{programType.weeks.length}}, Total Sets: {{programType.totalNumberOfSets}}</p> </div> </div> <div layout=\"row\" flex=\"none\" layout-align=\"center start\"> <md-button class=\"md-icon-button\" md-colors=\"{ background: 'orange-300' }\" ng-click=\"editFunction(programType)\" aria-label=\"Edit\"> <md-icon md-svg-src=\"images/icons/edit.svg\"></md-icon> </md-button> <md-button ng-if=\"!programType.default\" class=\"md-icon-button\" md-colors=\"{ background: 'red-300' }\" class=\"md-raised\" ng-click=\"removeFunction(programType)\" aria-label=\"Remove\"> <md-icon md-svg-src=\"images/icons/remove.svg\"></md-icon> </md-button> </div> </div> </md-list-item> </md-list> <!-- BODY --> <md-expansion-panel-group> <!-- Description --> <md-expansion-panel ng-if=\"programType.description && programType.description.length > 0\"> <md-expansion-panel-collapsed> <div class=\"md-title\">Description</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-collapsed> <md-expansion-panel-expanded> <md-expansion-panel-header ng-click=\"$panel.collapse()\"> <div class=\"md-title\">Description</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-header> <md-expansion-panel-content> <p>{{programType.description}}</p> </md-expansion-panel-content> </md-expansion-panel-expanded> </md-expansion-panel> <!-- Exercises --> <md-expansion-panel> <md-expansion-panel-collapsed> <div class=\"md-title\">Exercises</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-collapsed> <md-expansion-panel-expanded> <md-expansion-panel-header ng-click=\"$panel.collapse()\"> <div class=\"md-title\">Exercises</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-header> <md-expansion-panel-content> <md-list ng-class=\"{ 'no-padding-top': true, 'no-padding-bottom': true }\" ng-repeat=\"exercise in programType.exercises\" flex> <md-list-item class=\"md-2-line\" flex> <div class=\"md-list-item-text\" flex> <h3 flex>{{exercise.name}}</h3> <p>Type: {{exercise.exerciseType.name}}</p> </div> </md-list-item> <md-divider ng-if=\"!$last\"></md-divider> </md-list> </md-expansion-panel-content> </md-expansion-panel-expanded> </md-expansion-panel> <!-- Weeks --> <md-expansion-panel ng-repeat=\"week in programType.weeks\"> <md-expansion-panel-collapsed> <div class=\"md-title\">{{week.name}}</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-collapsed> <md-expansion-panel-expanded> <md-expansion-panel-header ng-click=\"$panel.collapse()\"> <div class=\"md-title\">{{week.name}}</div> <div class=\"md-summary\"></div> <md-expansion-panel-icon></md-expansion-panel-icon> </md-expansion-panel-header> <md-expansion-panel-content> <md-list class=\"no-padding-top no-padding-bottom\" ng-repeat=\"day in week.days\" flex> <p class=\"no-margin-top\">{{day.name}}</p> <md-divider></md-divider> <span ng-repeat=\"set in day.sets\"> <span class=\"header-list-item\"> <md-list-item class=\"md-2-line\" md-colors=\"{ background: 'primary-50' }\" flex> <div class=\"md-list-item-text\"> <h3 flex>Set type: {{set.setType.name}}</h3> <p>Number of sets: {{set.numberOfSets}}</p> </div> </md-list-item> </span> <span class=\"body-list-item\"> <md-list-item class=\"md-2-line\" ng-repeat=\"setExercise in set.exercises\" flex> <div ng-if=\"setExercise.exercise.exerciseType.id === 0\" class=\"md-list-item-text\" flex> <h3 flex>{{setExercise.exercise.name}}</h3> <p>{{setExercise.numberOfReps}} reps at {{setExercise.oneRepMaxPercentage}}% ORM, Increment Multiplier: {{setExercise.incrementMultiplier}}</p> </div> <div ng-if=\"setExercise.exercise.exerciseType.id === 1\" class=\"md-list-item-text\"> <h3 flex>{{setExercise.exercise.name}}</h3> <p>{{setExercise.numberOfReps}} reps</p> </div> <div ng-if=\"setExercise.exercise.exerciseType.id === 2\" class=\"md-list-item-text\"> <h3 flex>{{setExercise.exercise.name}}</h3> <p>Duration: {{setExercise.duration}}</p> </div> </md-list-item> </span> <md-divider></md-divider> </span> </md-list> </md-expansion-panel-content> </md-expansion-panel-expanded> </md-expansion-panel> </md-expansion-panel-group> </span> </div> </div>"
   );
 
 
