@@ -1690,11 +1690,12 @@ angular.module('powerHouseApp')
           programType: programType,
           id: programType.id,
           text: programType.programTypeName,
-          secondText: 'Total Weeks: ' + programType.weeks.length,
-          thirdText: 'Total Sets: ' + programType.totalNumberOfSets,
+          secondText: 'Total Weeks: ' + programType.weeks.length + ', Total Sets: ' + programType.totalNumberOfSets,
+          thirdText: 'Experience Level: ' + programType.level.name,
           href: '#/program-type-information/' + programType.id,
           removable: !programType.default,
-          editable: true
+          editable: true,
+          color: 'background'
         };
     };
 
@@ -2275,7 +2276,8 @@ angular.module('powerHouseApp')
         percentage: program.percentComplete,
         href: '#/program-information/' + program.id,
         removable: !program.default,
-        editable: true
+        editable: true,
+        color: program.complete ? 'green-50' : 'background'
       };
     };
 
@@ -2468,10 +2470,6 @@ angular.module('powerHouseApp')
     var programExercisesInvalid = function(exercises){
       var invalid = false;
 
-      if(exercises.length <= 0){
-        invalid = true;
-      }
-      
       for(var i = 0; i < exercises.length; i++){
         var exercise = exercises[i];
         if(utilService.isUndefined(exercise.oneRepMax) || exercise.oneRepMax < 1){
@@ -12048,7 +12046,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('scripts/directives/list/listView.html',
-    "<div layout=\"column\"> <span ng-if=\"values && values.length > 0\" flex> <md-list> <md-list-item class=\"md-3-line background-white margin-bottom-10\" ng-repeat=\"value in values\" ng-href=\"{{value.href}}\" md-whiteframe=\"2\"> <div class=\"padding-top-24 padding-bottom-16 padding-right-16 padding-left-16\" layout=\"row\" flex=\"100\"> <div layout=\"column\" flex> <div layout=\"column\" flex> <p class=\"list-text headline truncate-text\">{{value.text}}</p> <p class=\"list-text subhead truncate-text\">{{value.secondText}}</p> <p class=\"list-text subhead truncate-text\">{{value.thirdText}}</p> </div> </div> <div layout=\"row\" flex=\"none\" layout-align=\"center start\"> <md-button ng-if=\"value.editable\" class=\"md-icon-button\" md-colors=\"{ background: 'orange-300' }\" ng-click=\"editFunction(value)\" aria-label=\"Edit\"> <md-icon md-svg-src=\"images/icons/edit.svg\"></md-icon> </md-button> <md-button ng-if=\"value.removable\" class=\"md-icon-button\" md-colors=\"{ background: 'red-300' }\" class=\"md-raised\" ng-click=\"removeFunction(value)\" aria-label=\"Remove\"> <md-icon md-svg-src=\"images/icons/remove.svg\"></md-icon> </md-button> </div> <md-progress-linear ng-if=\"value.percentage >= 0\" class=\"list-progress\" md-mode=\"determinate\" value=\"{{value.percentage}}\"></md-progress-linear> </div> </md-list-item> </md-list> </span> </div>"
+    "<div layout=\"column\"> <span ng-if=\"values && values.length > 0\" flex> <md-list> <md-list-item class=\"md-3-line background-white margin-bottom-10\" ng-repeat=\"value in values\" ng-href=\"{{value.href}}\" md-whiteframe=\"2\"> <div class=\"padding-top-24 padding-bottom-16 padding-right-16 padding-left-16\" layout=\"row\" flex=\"100\" md-colors=\"{ background: '{{value.color}}' }\"> <div layout=\"column\" flex> <div layout=\"column\" flex> <p class=\"list-text headline truncate-text\">{{value.text}}</p> <p class=\"list-text subhead truncate-text\">{{value.secondText}}</p> <p class=\"list-text subhead truncate-text\">{{value.thirdText}}</p> </div> </div> <div layout=\"row\" flex=\"none\" layout-align=\"center start\"> <md-button ng-if=\"value.editable\" class=\"md-icon-button\" md-colors=\"{ background: 'orange-300' }\" ng-click=\"editFunction(value)\" aria-label=\"Edit\"> <md-icon md-svg-src=\"images/icons/edit.svg\"></md-icon> </md-button> <md-button ng-if=\"value.removable\" class=\"md-icon-button\" md-colors=\"{ background: 'red-300' }\" class=\"md-raised\" ng-click=\"removeFunction(value)\" aria-label=\"Remove\"> <md-icon md-svg-src=\"images/icons/remove.svg\"></md-icon> </md-button> </div> <md-progress-linear ng-if=\"value.percentage >= 0\" class=\"list-progress\" md-mode=\"determinate\" value=\"{{value.percentage}}\"></md-progress-linear> </div> </md-list-item> </md-list> </span> </div>"
   );
 
 
@@ -12143,7 +12141,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('views/help.html',
-    "<div layout=\"column\" layout-padding> <div layout=\"column\" layout-align=\"none center\"> <h3>Help coming soon.</h3> </div> </div>"
+    "<div layout=\"column\" layout-padding> <div layout=\"column\"> <md-card> <md-card-header class=\"no-padding-right\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header-text layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <span class=\"font-weight-600\">Help</span> </div> </md-card-header-text> </md-card-header> <md-card-content layout=\"column\"> <div class=\"padding-bottom-24\" layout=\"column\"> <span class=\"padding-bottom-4 font-weight-600\">About</span> <md-divider></md-divider> <p class=\"no-margin-bottom\">Powerhouse is an application that makes it easy to track tailored workout programs.</p> <p class=\"no-margin-bottom\">Custom programs can be entered, allowing for unlimited customization and freedom to design and plan workouts.</p> </div> <div class=\"padding-bottom-24\" layout=\"column\"> <span class=\"padding-bottom-4 font-weight-600\">Getting Started</span> <md-divider></md-divider> <p>To get started simply add a new program based off of a pre-defined program type or start by defining a program type yourself.</p> <div layout=\"row\" layout-align=\"center center\"> <div layout=\"column\" flex> <md-button class=\"md-raised\" ng-href=\"#/add-program\">Add Program</md-button> </div> <div layout=\"column\" flex> <md-button class=\"md-raised\" ng-href=\"#/add-program-type\">Add Type</md-button> </div> </div> <p class=\"no-margin-bottom\">Once the program is created the application will automatically calculate your tailored workout.</p> <p>From here find your program in the program list, once found click on the program to view and complete the components of the workout.</p> <div layout=\"row\" layout-align=\"center center\"> <md-button class=\"md-raised\" ng-href=\"#/program-list\">Program List</md-button> </div> </div> <div class=\"padding-bottom-24\" layout=\"column\"> <span class=\"padding-bottom-4 font-weight-600\">Programs</span> <md-divider></md-divider> <p class=\"no-margin-bottom\">A program is a tailored workout based off of a program type.</p> <p class=\"no-margin-bottom\">Each program will contain a number of weeks and days. Each day will have a number of sets with exercises that are intented to be complete.</p> <p>Once a set exercise is complete mark it as done by checking the checkbox. This will automatically update the percentage completion of the program.</p> <div layout=\"row\" layout-align=\"center center\"> <md-button class=\"md-raised\" ng-href=\"#/add-program\">Add Program</md-button> </div> </div> <div class=\"padding-bottom-24\" layout=\"column\"> <span class=\"padding-bottom-4 font-weight-600\">Program Types</span> <md-divider></md-divider> <p class=\"no-margin-bottom\">A program type is a scaffold used to create tailored workouts. Complete customization is available to cater for a wide range of potential workouts.</p> <div layout=\"row\" layout-align=\"center center\"> <md-button class=\"md-raised\" ng-href=\"#/add-program-type\">Add Program Type</md-button> </div> </div> </md-card-content> </md-card> </div> </div>"
   );
 
 
