@@ -1,6 +1,0 @@
-<div layout="column" layout-padding>
-    <list-filter class="no-padding-bottom" values="filteredPrograms" original-values="originalPrograms" property="filterProperty"></list-filter>
-    <order-list class="no-padding-top" order-values="orderValues" key="orderKey" reverse-key="reverseKey" values="programs" original-values="filteredPrograms"></order-list>
-    <program-list class="no-padding-top" ng-if="programs && programs.length > 0" programs="programs" remove-function="removeFunction" edit-function="editFunction"></program-list>
-    <list-empty ng-if="!programs || programs.length <= 0" message="emptyListMessage" button-text="emptyListButtonText" button-link="emptyListButtonLink"></list-empty>
-</div>

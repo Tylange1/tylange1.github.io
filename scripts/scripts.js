@@ -20,7 +20,7 @@ angular
     'LocalStorageModule',
     'material.components.expansionPanels'
   ])
-  .config(["$routeProvider", "localStorageServiceProvider", "$mdThemingProvider", "$mdInkRippleProvider", function ($routeProvider, localStorageServiceProvider, $mdThemingProvider, $mdInkRippleProvider) {
+  .config(["$routeProvider", "localStorageServiceProvider", "$mdThemingProvider", function ($routeProvider, localStorageServiceProvider, $mdThemingProvider) {
     $routeProvider
       .when('/', {
         templateUrl: 'views/dashboard.html',
@@ -1298,8 +1298,7 @@ angular.module('powerHouseApp')
           if(newValue !== oldValue){
             scope.exercises = addProgramTypeService.exercises;
           }
-        })
-
+        });
       }
     };
   }]);
@@ -1359,7 +1358,7 @@ angular.module('powerHouseApp')
         0: weightedExerciseInvalid(setExercise),
         1: nonWeightedExerciseInvalid(setExercise),
         2: cardioExerciseInvalid(setExercise)
-      }
+      };
       if(exerciseInvalid(setExercise.exercise)){
         return true;
       }
@@ -1375,8 +1374,8 @@ angular.module('powerHouseApp')
     };
 
     var setExercisesInvalid = function(setType, setExercises){
-      return (utilService.isUndefined(setExercises) || setExercises.length < 1
-      || setExercisesNotConfirmed(setType, setExercises) || setExercisesTypesInvalid(setExercises));
+      return (utilService.isUndefined(setExercises) || setExercises.length < 1 || 
+      setExercisesNotConfirmed(setType, setExercises) || setExercisesTypesInvalid(setExercises));
     };
 
     var setExercisesNotConfirmed = function(setType, setExercises){
@@ -1406,10 +1405,10 @@ angular.module('powerHouseApp')
     };
 
     var weightedExerciseInvalid = function(setExercise){
-      return (utilService.isUndefined(setExercise.numberOfReps) || setExercise.numberOfReps < 1 
-      || utilService.isUndefined(setExercise.oneRepMaxPercentage) || setExercise.oneRepMaxPercentage < 0 
-      || setExercise.oneRepMaxPercentage > 100 || utilService.isUndefined(setExercise.incrementMultiplier) 
-      || setExercise.incrementMultiplier < 0);
+      return (utilService.isUndefined(setExercise.numberOfReps) || setExercise.numberOfReps < 1 ||
+      utilService.isUndefined(setExercise.oneRepMaxPercentage) || setExercise.oneRepMaxPercentage < 0 || 
+      setExercise.oneRepMaxPercentage > 100 || utilService.isUndefined(setExercise.incrementMultiplier) || 
+      setExercise.incrementMultiplier < 0);
     };
 
     var nonWeightedExerciseInvalid = function(setExercise){
@@ -1417,8 +1416,8 @@ angular.module('powerHouseApp')
     };
 
     var cardioExerciseInvalid = function(setExercise){
-      return (utilService.isUndefined(setExercise.minutes) || setExercise.minutes < 0
-      || utilService.isUndefined(setExercise.seconds) || setExercise.seconds < 0 || setExercise.seconds > 59);
+      return (utilService.isUndefined(setExercise.minutes) || setExercise.minutes < 0 || 
+      utilService.isUndefined(setExercise.seconds) || setExercise.seconds < 0 || setExercise.seconds > 59);
     };
 
     var addDuration = function(setExercise){
@@ -2552,7 +2551,7 @@ angular.module('powerHouseApp')
     };
 
     contract.showProgramCompleteToast = function(text, completeFunction){
-      $mdToast.show(getProgramCompleteObject(text, position)).then(function(response){
+      $mdToast.show(getProgramCompleteObject(text, position)).then(function(){
         completeFunction();
       });
     };
@@ -2569,7 +2568,7 @@ angular.module('powerHouseApp')
       return $mdToast.simple()
         .textContent(text)
         .position(position);
-    }
+    };
 
     return contract;
   }]);
@@ -3507,11 +3506,11 @@ angular.module('powerHouseApp')
           if(newValue !== oldValue){
             scope.values = listFilterService.filter(scope.originalValues, scope.filterValue, scope.property);
           }
-        })
+        });
 
         scope.clear = function(){
           scope.filterValue = '';
-        }
+        };
       }
     };
   }]);
@@ -3536,7 +3535,7 @@ angular.module('powerHouseApp')
         originalValues: '=',
         values: '='
       },
-      link: function postLink(scope, element, attrs) {
+      link: function postLink(scope) {
         // Get default / persisted values
         scope.reversed = orderListService.getReversedValue(scope.reverseKey);
         scope.selectedOrder = orderListService.getOrderValue(scope.key);
@@ -3552,12 +3551,12 @@ angular.module('powerHouseApp')
             if(scope.selectedOrder.text !== orderListService.getOrderValue(scope.key).text){
               orderListService.orderValueChanged(scope.key, scope.selectedOrder);
               scope.reversed = false;
-              scope.values = orderListService.orderBy(scope.selectedOrder, scope.originalValues, scope.reversed)
+              scope.values = orderListService.orderBy(scope.selectedOrder, scope.originalValues, scope.reversed);
               scope.lastSelected = scope.selectedOrder;
             }
             else if(scope.selectedOrder.text === orderListService.getOrderValue(scope.key).text){
               // sort the values
-              scope.values = orderListService.orderBy(scope.selectedOrder, scope.originalValues, scope.reversed)
+              scope.values = orderListService.orderBy(scope.selectedOrder, scope.originalValues, scope.reversed);
             }
           }
         });
@@ -3572,16 +3571,16 @@ angular.module('powerHouseApp')
           }
         });
 
-        scope.reverse = function(selectedOrder){
+        scope.reverse = function(){
           scope.reversed = !scope.reversed;
-          scope.values = orderListService.orderBy(scope.selectedOrder, scope.originalValues, scope.reversed)
+          scope.values = orderListService.orderBy(scope.selectedOrder, scope.originalValues, scope.reversed);
         };
 
         scope.$watch(function(){
           return scope.originalValues;
         }, function(newValue, oldValue){
           if(newValue !== oldValue){
-            scope.values = orderListService.orderBy(scope.selectedOrder, scope.originalValues, scope.reversed)
+            scope.values = orderListService.orderBy(scope.selectedOrder, scope.originalValues, scope.reversed);
           }
         });
       }
@@ -3725,7 +3724,7 @@ angular.module('powerHouseApp')
         id: 1,
         name: 'Superset'
       },
-    ]
+    ];
 
     contract.getDefault = function(){
       return contract.types[0];
@@ -3822,7 +3821,7 @@ angular.module('powerHouseApp')
         exercises: '=',
         exercise: '='
       },
-      link: function postLink(scope) {
+      link: function postLink() {
       }
     };
   });
@@ -3843,8 +3842,7 @@ angular.module('powerHouseApp')
       scope: {
         numberOfSets: '='
       },
-      link: function postLink(scope) {
-        
+      link: function postLink() {
       }
     };
   });
@@ -3865,7 +3863,7 @@ angular.module('powerHouseApp')
       scope: {
         setExercise: '='
       },      
-      link: function postLink(scope, element, attrs) {
+      link: function postLink() {
       }
     };
   });
@@ -3886,7 +3884,7 @@ angular.module('powerHouseApp')
       scope: {
         setExercise: '='
       },
-      link: function postLink(scope, element, attrs) {
+      link: function postLink() {
       }
     };
   });
@@ -3920,7 +3918,7 @@ angular.module('powerHouseApp')
 
         scope.editSetExercise = function(setExercise){
           setExercise.confirmed = false;
-        }
+        };
 
         scope.confirmSetExercise = function(setExercise){
           setExercise.confirmed = true;
@@ -3932,7 +3930,7 @@ angular.module('powerHouseApp')
 
         scope.isInvalid = function(setExercise){
           return addProgramTypeSetTypeSupersetService.isInvalid(setExercise);
-        }
+        };
 
         scope.hasConfirmed = function(){
           return addProgramTypeSetTypeSupersetService.hasConfirmed(scope.set.exercises);
@@ -3982,7 +3980,7 @@ angular.module('powerHouseApp')
         contract.superSets = tempExerciseSetsArray;
       });
 
-      return addProgramTypeSetExerciseService.removeSetExercise(setExercises, setExercise);;
+      return addProgramTypeSetExerciseService.removeSetExercise(setExercises, setExercise);
     };
 
     contract.hasConfirmed = function(setExercises){
@@ -4021,12 +4019,6 @@ angular.module('powerHouseApp')
       return addProgramTypeSetExerciseService.addSetExercise(setExercises);
     };
 
-    var filterNonConfirmed = function(setExercises){
-      return setExercises.filter(function(setExercise){
-        return setExercise.confirmed === true;
-      });
-    }
-
     return contract;
   }]);
 
@@ -4058,7 +4050,7 @@ angular.module('powerHouseApp')
         confirmed: false,
         exercise: {},
       };
-    }
+    };
 
     return contract;
   }]);
@@ -4355,7 +4347,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('views/programTypeList.html',
-    "<div layout=\"column\" layout-padding> <list-filter class=\"no-padding-bottom\" values=\"filteredProgramTypes\" original-values=\"originalProgramTypes\" property=\"filterProperty\"></list-filter> <order-list class=\"no-padding-top\" order-values=\"orderValues\" key=\"orderKey\" reverse-key=\"reverseKey\" values=\"programTypes\" original-values=\"filteredProgramTypes\"></order-list> <program-type-list ng-if=\"programTypes || programTypes.length > 0\" program-types=\"programTypes\"></program-type-list> <list-empty ng-if=\"!programTypes || programTypes.length <= 0\" message=\"emptyListMessage\" button-text=\"emptyListButtonText\" button-link=\"emptyListButtonLink\"></list-empty> </div>"
+    "<div layout=\"column\" layout-padding> <list-filter class=\"no-padding-bottom\" values=\"filteredProgramTypes\" original-values=\"originalProgramTypes\" property=\"filterProperty\"></list-filter> <order-list class=\"no-padding-top\" order-values=\"orderValues\" key=\"orderKey\" reverse-key=\"reverseKey\" values=\"programTypes\" original-values=\"filteredProgramTypes\"></order-list> <program-type-list class=\"no-padding-top\" ng-if=\"programTypes && programTypes.length > 0\" program-types=\"programTypes\"></program-type-list> <list-empty ng-if=\"!programTypes || programTypes.length <= 0\" message=\"emptyListMessage\" button-text=\"emptyListButtonText\" button-link=\"emptyListButtonLink\"></list-empty> </div>"
   );
 
 
