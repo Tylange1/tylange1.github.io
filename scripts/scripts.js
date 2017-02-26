@@ -97,6 +97,11 @@ angular
         controller: 'OneRepMaxCalculatorCtrl',
         controllerAs: 'oneRepMaxCalculator'
       })
+      .when('/barbell-plate-calculator', {
+        templateUrl: 'views/barbellPlateCalculator.html',
+        controller: 'BarbellPlateCalculatorCtrl',
+        controllerAs: 'barbellPlateCalculator'
+      })
       .otherwise({
         redirectTo: '/'
       });
@@ -931,13 +936,7 @@ angular.module('powerHouseApp')
       helpAddProgramTypeExerciseTypeUrl: 'scripts/directives/addProgramType/help/helpAddProgramTypeExerciseTypeTemplate.html',
       exercises: [],
       remove: true,
-      removeFunction: function(exercise){
-
-      },
       edit: true,
-      editFunction: function(exercise){
-
-      }
     };
 
     contract.addExercise = function(exercisesArray){
@@ -1125,7 +1124,7 @@ angular.module('powerHouseApp')
           }
           return rArray;
         }
-      }
+      };
 
       var rArray = weekArray;
 
@@ -1309,7 +1308,7 @@ angular.module('powerHouseApp')
           }
           return rArray;
         }
-      }
+      };
 
       var rArray = dayArray;
 
@@ -1512,7 +1511,7 @@ angular.module('powerHouseApp')
           }
           return rArray;
         }
-      }
+      };
 
       var rArray = setArray;
 
@@ -1721,6 +1720,8 @@ angular.module('powerHouseApp')
       programListReversedKey: 'PROGRAM_LIST_REVERSED_KEY',
       programTypeListOrderKey: 'PROGRAM_TYPE_LIST_ORDER_KEY',
       programTypeListReversedKey: 'PROGRAM_TYPE_LIST_REVERSED_KEY',
+      barbellPlateCalculatorBarWeight: 'BARBELL_PLATE_CALCULATOR_BAR_WEIGHT_KEY',
+      barbellPlateCalculatorCurrentWeight: 'BARBELL_PLATE_CALCULATOR_CURRENT_WEIGHT_KEY',
     };
 
     return contract;
@@ -11264,14 +11265,19 @@ angular.module('powerHouseApp')
           href: '#/settings'
         },
         {
+          text: 'ORM Calculator',
+          icon: 'images/icons/percent.svg',
+          href: '#/one-rep-max-calculator'
+        },
+        {
+          text: 'Barbell Plate Calculator',
+          icon: 'images/icons/barbellBlack.svg',
+          href: '#/barbell-plate-calculator'
+        },        
+        {
           text: 'Help',
           icon: 'images/icons/info.svg',
           href: '#/help'
-        },
-        {
-          text: 'Upgrade',
-          icon: 'images/icons/moneyBlack.svg',
-          href: '#/upgrade'
         },
         {
           text: 'Contact',
@@ -11279,10 +11285,10 @@ angular.module('powerHouseApp')
           href: '#/contact'
         },
         {
-          text: 'ORM Calculator',
-          icon: 'images/icons/percent.svg',
-          href: '#/one-rep-max-calculator'
-        }  
+          text: 'Upgrade',
+          icon: 'images/icons/moneyBlack.svg',
+          href: '#/upgrade'
+        }
       ]
     };
 
@@ -12036,7 +12042,7 @@ angular.module('powerHouseApp')
           }
           return rArray;
         }
-      }
+      };
 
       var rArray = setExerciseArray;
 
@@ -12193,7 +12199,7 @@ angular.module('powerHouseApp')
           name: i + '% ORM',
           percentage: i / 100,
           value: 0
-        })
+        });
       }
     };
 
@@ -12303,6 +12309,366 @@ angular.module('powerHouseApp')
     return contract;
   });
 
+'use strict';
+
+/**
+ * @ngdoc function
+ * @name powerHouseApp.controller:BarbellplatecalculatorCtrl
+ * @description
+ * # BarbellplatecalculatorCtrl
+ * Controller of the powerHouseApp
+ */
+angular.module('powerHouseApp')
+  .controller('BarbellPlateCalculatorCtrl', ['$scope', 'barbellPlateCalculatorService', function ($scope, barbellPlateCalculatorService) {
+
+    $scope.targetWeight = '';
+    barbellPlateCalculatorService.calculatePlates($scope.targetWeight);
+    $scope.currentWeights = barbellPlateCalculatorService.getCurrentWeights();
+    $scope.barbellWeight = barbellPlateCalculatorService.getBarbellWeight();
+    $scope.unit = barbellPlateCalculatorService.getCurrentUnit();
+    $scope.range = barbellPlateCalculatorService.getRange();
+    $scope.plates = barbellPlateCalculatorService.getPlates();
+
+    $scope.helpUrl = barbellPlateCalculatorService.helpUrl;
+
+    // Watch the target weight 
+    $scope.$watch(function(){
+      return $scope.targetWeight;
+    }, function(newValue, oldValue){
+      if(newValue !== oldValue){
+        barbellPlateCalculatorService.calculatePlates($scope.targetWeight);
+      }
+    });
+
+    $scope.$watch(function(){
+      return $scope.barbellWeight;
+    }, function(newValue, oldValue){
+      if(newValue !== oldValue){
+        barbellPlateCalculatorService.updateBarbellWeight($scope.barbellWeight);
+        barbellPlateCalculatorService.calculatePlates($scope.targetWeight);
+      }
+    });
+
+    $scope.$watch(function(){
+      return $scope.currentWeights;
+    }, function(newValue, oldValue){
+      if(newValue !== oldValue){
+        barbellPlateCalculatorService.updateCurrentWeights($scope.currentWeights);
+        barbellPlateCalculatorService.calculatePlates($scope.targetWeight);
+      }
+    }, true);
+
+    $scope.$watch(function(){
+      return barbellPlateCalculatorService.getPlates();
+    }, function(newValue, oldValue){
+      if(newValue !== oldValue){
+        $scope.plates = barbellPlateCalculatorService.getPlates();
+      }
+    }, true);
+  }]);
+
+'use strict';
+
+/**
+ * @ngdoc service
+ * @name powerHouseApp.barbellPlateCalculatorService
+ * @description
+ * # barbellPlateCalculatorService
+ * Service in the powerHouseApp.
+ */
+angular.module('powerHouseApp')
+  .service('barbellPlateCalculatorService', ['unitService', 'utilService', 'storageService', 'keyHandlerService', function (unitService, utilService, storageService, keyHandlerService) {
+    var contract = {
+      helpUrl: 'views/helpBarbellPlateCalculator.html',
+      maxAvailable: 20,
+      plates: [],
+      currentWeights: {
+        units: unitService.getCurrentUnit(),
+        weights: []
+      },
+      barbellWeight: 0, 
+      weights: {
+        kilograms: [
+          {
+            id: 0,
+            value: 50,
+            available: 10,
+            enabled: true,
+            color: 'deep-purple-500',
+          },
+          {
+            id: 1,
+            value: 25,
+            available: 10,
+            enabled: true,
+            color: 'red-500'
+          },
+          {
+            id: 2,
+            value: 20,
+            available: 10,
+            enabled: true,
+            color: 'blue-500'
+          },
+          {
+            id: 3,
+            value: 15,
+            available: 10,
+            enabled: true,
+            color: 'yellow-500'
+          },
+          {
+            id: 4,
+            value: 10,
+            available: 10,
+            enabled: true,
+            color: 'green-500'
+          },
+          {
+            id: 5,
+            value: 5,
+            available: 10,
+            enabled: true,
+            color: 'grey-900'
+          },
+          {
+            id: 6,
+            value: 2.5,
+            available: 10,
+            enabled: true,
+            color: 'orange-500'
+          },
+          {
+            id: 7,
+            value: 1.25,
+            available: 10,
+            enabled: true,
+            color: 'grey-500'
+          }
+        ],
+        pounds: [
+          {
+            id: 0,
+            value: 110,
+            available: 10,
+            enabled: true,
+            color: 'deep-purple-500'
+          },
+          {
+            id: 1,
+            value: 55,
+            available: 10,
+            enabled: true,
+            color: 'red-500'
+          },
+          {
+            id: 2,
+            value: 45,
+            available: 10,
+            enabled: true,
+            color: 'blue-500'
+          },
+          {
+            id: 3,
+            value: 35,
+            available: 10,
+            enabled: true,
+            color: 'yellow-500'
+          },
+          {
+            id: 4,
+            value: 25,
+            available: 10,
+            enabled: true,
+            color: 'green-500'
+          },
+          {
+            id: 5,
+            value: 10,
+            available: 10,
+            enabled: true,
+            color: 'grey-900'
+          },
+          {
+            id: 6,
+            value: 5,
+            available: 10,
+            enabled: true,
+            color: 'orange-500'
+          },
+          {
+            id: 7,
+            value: 2.5,
+            available: 10,
+            enabled: true,
+            color: 'grey-500'
+          }
+        ]
+      }
+    };
+
+    var init = function(){
+      contract.currentWeights = getCurrentWeightsFromStorage();
+      contract.barbellWeight = getBarbellWeightFromStorage();
+      contract.plates = angular.copy(contract.currentWeights.weights);
+    };
+
+    contract.getCurrentUnit = function(){
+      return unitService.getCurrentUnit();
+    };
+
+    contract.getCurrentWeights = function(){
+      // Check if the unit used differs from the global unit
+      if(unitChanged(contract.getCurrentUnit(), contract.currentWeights.units)){
+        contract.updateBarbellWeight(0);
+        contract.updateCurrentWeights({ units: contract.getCurrentUnit(), weights: contract.weights[contract.getCurrentUnit().name] });
+        contract.plates = angular.copy(contract.currentWeights.weights);
+      }
+      return contract.currentWeights;
+    };
+
+    contract.getBarbellWeight = function(){
+      return contract.barbellWeight;
+    };
+
+    contract.calculatePlates = function(targetWeight){
+      if(isInvalid(targetWeight, contract.barbellWeight, contract.currentWeights.weights) === true){
+        contract.plates = angular.copy(contract.currentWeights.weights);
+        return [];
+      }
+
+      var plates = [];
+      var currentWeight = ((targetWeight - contract.barbellWeight) / 2);
+        
+      // For every plate denomination
+      for(var i = 0; i < contract.currentWeights.weights.length; i++){
+        var plate = angular.copy(contract.currentWeights.weights[i]);
+
+        // Check that the plate is used and that it is less than the currentWeight
+        if(plate.enabled === true && plate.value <= currentWeight){
+          
+          // Find how many times we can divide into the value
+          var multiples = Math.floor(currentWeight / plate.value);
+          
+          // Check if there is enough plates available for both sides
+          if(multiples > (plate.available / 2)){
+            var available = plate.available;
+            if(available % 2 !== 0){
+              available = available - 1;
+            }
+            multiples = available / 2;            
+          }
+
+          // Update the currentWeight
+          currentWeight = currentWeight - (multiples * plate.value);
+          plate.number = multiples;
+        }
+        plates.push(plate);
+      }
+
+      if(currentWeight !== 0){
+        plates = contract.currentWeights.weights;
+      }
+      
+      contract.plates = plates;
+    };
+
+    contract.updateBarbellWeight = function(barbellWeight){
+      contract.barbellWeight = barbellWeight;
+      storeBarbellWeight(barbellWeight);
+    };
+
+    contract.updateCurrentWeights = function(currentWeights){
+      contract.currentWeights = currentWeights;
+      storeCurrentWeights(currentWeights);
+    };
+
+    contract.getRange = function(){
+      var rArray = [];
+      for(var i = 0; i < contract.maxAvailable; i++){
+        rArray.push(i);
+      }
+      return rArray;
+    };
+
+    contract.getPlates = function(){
+      return contract.plates;
+    };
+
+    var isInvalid = function(targetWeight, barbellWeight, currentWeights){
+      return ((utilService.isUndefined(targetWeight) || targetWeight === '' || targetWeight < 0 || targetWeight % contract.getCurrentUnit().interval !== 0) || 
+      (utilService.isUndefined(barbellWeight) || barbellWeight === '' || barbellWeight < 0 || barbellWeight % contract.getCurrentUnit().interval !== 0) || 
+      (utilService.isUndefined(currentWeights) || currentWeights.length === 0));
+    };
+
+    var unitChanged = function(globalUnit, compareUnit){
+      return globalUnit.name !== compareUnit.name;
+    };
+
+    var getBarbellWeightFromStorage = function(){
+      return storageService.getValueOrDefault(keyHandlerService.keys.barbellPlateCalculatorBarWeight, 0);
+    };
+
+    var storeBarbellWeight = function(barbellWeight){
+      storageService.storeValue(keyHandlerService.keys.barbellPlateCalculatorBarWeight, barbellWeight);
+    };
+
+    var getCurrentWeightsFromStorage = function(){
+      var defaultValue = { units: contract.getCurrentUnit(), weights: contract.weights[contract.getCurrentUnit().name] };
+      var currentWeight = storageService.getValueOrDefault(keyHandlerService.keys.barbellPlateCalculatorCurrentWeight , defaultValue);
+
+      // Check if the units have changed
+      if(unitChanged(currentWeight.units, contract.getCurrentUnit())){
+        currentWeight = defaultValue;
+      }
+      return currentWeight;
+    };
+
+    var storeCurrentWeights = function(currentWeights){
+      storageService.storeValue(keyHandlerService.keys.barbellPlateCalculatorCurrentWeight, currentWeights);
+    };
+
+    init();
+
+    return contract;
+  }]);
+
+'use strict';
+
+/**
+ * @ngdoc directive
+ * @name powerHouseApp.directive:barbellPlates
+ * @description
+ * # barbellPlates
+ */
+angular.module('powerHouseApp')
+  .directive('barbellPlates', function () {
+    return {
+      templateUrl: 'scripts/directives/barbellPlates/barbellPlatesView.html',
+      restrict: 'E',
+      scope: {
+        unit: '=',
+        plates: '='
+      },
+      link: function postLink() {
+      }
+    };
+  });
+
+'use strict';
+
+/**
+ * @ngdoc service
+ * @name powerHouseApp.barbellPlatesService
+ * @description
+ * # barbellPlatesService
+ * Service in the powerHouseApp.
+ */
+angular.module('powerHouseApp')
+  .service('barbellPlatesService', function () {
+    // AngularJS will instantiate a singleton by calling "new" on this function
+  });
+
 angular.module('powerHouseApp').run(['$templateCache', function($templateCache) {
   'use strict';
 
@@ -12323,7 +12689,7 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
     "\n" +
     "       ga('create', 'UA-XXXXX-X');\r" +
     "\n" +
-    "       ga('send', 'pageview');</script> <!-- build:js(.) scripts/vendor.js --> <!-- bower:js --> <script src=\"bower_components/angular/angular.js\"></script> <script src=\"bower_components/angular-animate/angular-animate.js\"></script> <script src=\"bower_components/angular-aria/angular-aria.js\"></script> <script src=\"bower_components/angular-cookies/angular-cookies.js\"></script> <script src=\"bower_components/angular-messages/angular-messages.js\"></script> <script src=\"bower_components/angular-resource/angular-resource.js\"></script> <script src=\"bower_components/angular-route/angular-route.js\"></script> <script src=\"bower_components/angular-sanitize/angular-sanitize.js\"></script> <script src=\"bower_components/angular-touch/angular-touch.js\"></script> <script src=\"bower_components/angular-material/angular-material.js\"></script> <script src=\"bower_components/angular-local-storage/dist/angular-local-storage.js\"></script> <script src=\"bower_components/angular-material-expansion-panel/dist/md-expansion-panel.js\"></script> <!-- endbower --> <!-- endbuild --> <!-- build:js({.tmp,app}) scripts/scripts.js --> <script src=\"scripts/app.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBar.js\"></script> <script src=\"scripts/controllers/dashboard.js\"></script> <script src=\"scripts/controllers/programList.js\"></script> <script src=\"scripts/controllers/addProgram.js\"></script> <script src=\"scripts/controllers/addProgramType.js\"></script> <script src=\"scripts/controllers/programTypeList.js\"></script> <script src=\"scripts/services/addProgramTypeService.js\"></script> <script src=\"scripts/services/programTypeService.js\"></script> <script src=\"scripts/services/exerciseTypeService.js\"></script> <script src=\"scripts/services/utilService.js\"></script> <script src=\"scripts/directives/addRemove/addRemove.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramType.js\"></script> <script src=\"scripts/directives/addProgramType/header/addProgramTypeHeader.js\"></script> <script src=\"scripts/directives/addProgramType/header/addProgramTypeHeaderService.js\"></script> <script src=\"scripts/directives/addProgramType/exercise/addProgramTypeExercise.js\"></script> <script src=\"scripts/directives/addProgramType/exercise/addProgramTypeExerciseService.js\"></script> <script src=\"scripts/directives/addProgramType/week/addProgramTypeWeek.js\"></script> <script src=\"scripts/directives/addProgramType/week/addProgramTypeWeekService.js\"></script> <script src=\"scripts/directives/addProgramType/day/addProgramTypeDay.js\"></script> <script src=\"scripts/directives/addProgramType/day/addProgramTypeDayService.js\"></script> <script src=\"scripts/directives/addProgramType/set/addProgramTypeSet.js\"></script> <script src=\"scripts/directives/addProgramType/set/addProgramTypeSetService.js\"></script> <script src=\"scripts/services/storageService.js\"></script> <script src=\"scripts/services/keyHandlerService.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeList.js\"></script> <script src=\"scripts/directives/list/list.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeListService.js\"></script> <script src=\"scripts/controllers/programTypeInformation.js\"></script> <script src=\"scripts/controllers/programInformation.js\"></script> <script src=\"scripts/services/programTypeInformationService.js\"></script> <script src=\"scripts/directives/addProgram/addProgram.js\"></script> <script src=\"scripts/directives/programList/programList.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeader.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeaderService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExerciseService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExercise.js\"></script> <script src=\"scripts/services/programService.js\"></script> <script src=\"scripts/directives/programList/programListService.js\"></script> <script src=\"scripts/services/programInformationService.js\"></script> <script src=\"scripts/controllers/editProgram.js\"></script> <script src=\"scripts/services/addProgramService.js\"></script> <script src=\"scripts/controllers/editProgramType.js\"></script> <script src=\"scripts/directives/messageCard/messageCard.js\"></script> <script src=\"scripts/services/toastService.js\"></script> <script src=\"scripts/services/defaultProgramTypeService.js\"></script> <script src=\"scripts/services/unitService.js\"></script> <script src=\"scripts/services/dashboardService.js\"></script> <script src=\"scripts/directives/highlightCard/highlightCard.js\"></script> <script src=\"scripts/directives/quickComplete/quickComplete.js\"></script> <script src=\"scripts/directives/quickComplete/quickCompleteService.js\"></script> <script src=\"scripts/services/recentlyActiveService.js\"></script> <script src=\"scripts/directives/help/helpService.js\"></script> <script src=\"scripts/directives/help/help.js\"></script> <script src=\"scripts/controllers/dialogController.js\"></script> <script src=\"scripts/directives/bottomNavigationBar/bottomNavigationBar.js\"></script> <script src=\"scripts/controllers/settings.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSetting.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSettingService.js\"></script> <script src=\"scripts/services/programconversionservice.js\"></script> <script src=\"scripts/services/adWeightService.js\"></script> <script src=\"scripts/services/adTriggerService.js\"></script> <script src=\"scripts/services/sideNavigationService.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBarService.js\"></script> <script src=\"scripts/controllers/upgrade.js\"></script> <script src=\"scripts/controllers/contact.js\"></script> <script src=\"scripts/controllers/help.js\"></script> <script src=\"scripts/directives/resetSetting/resetSetting.js\"></script> <script src=\"scripts/directives/resetSetting/resetSettingService.js\"></script> <script src=\"scripts/directives/dashboardProgramList/dashboardProgramList.js\"></script> <script src=\"scripts/directives/listEmpty/listEmpty.js\"></script> <script src=\"scripts/services/programTypeLevelService.js\"></script> <script src=\"scripts/directives/listFilter/listFilter.js\"></script> <script src=\"scripts/directives/orderList/orderList.js\"></script> <script src=\"scripts/directives/orderList/orderListService.js\"></script> <script src=\"scripts/directives/listFilter/listFilterService.js\"></script> <script src=\"scripts/services/programcompleteservice.js\"></script> <script src=\"scripts/services/setTypeService.js\"></script> <script src=\"scripts/directives/addProgramType/set/setInformation/addProgramTypeSetType.js\"></script> <script src=\"scripts/directives/addProgramType/set/setType/addProgramTypeSetTypeNormal.js\"></script> <script src=\"scripts/directives/addProgramType/set/exerciseType/addProgramTypeSetExerciseWeighted.js\"></script> <script src=\"scripts/directives/addProgramType/set/setInformation/addProgramTypeSetExerciseSelect.js\"></script> <script src=\"scripts/directives/addProgramType/set/setInformation/addProgramTypeSetNumberOfSets.js\"></script> <script src=\"scripts/directives/addProgramType/set/exerciseType/addProgramTypeSetExerciseNonWeighted.js\"></script> <script src=\"scripts/directives/addProgramType/set/exerciseType/addProgramTypeSetExerciseCardio.js\"></script> <script src=\"scripts/directives/addProgramType/set/setType/addProgramTypeSetTypeSuperset.js\"></script> <script src=\"scripts/directives/addProgramType/set/setType/addProgramTypeSetTypeSupersetService.js\"></script> <script src=\"scripts/directives/addProgramType/set/setType/addprogramtypesettypenormalservice.js\"></script> <script src=\"scripts/services/addProgramTypeSetExerciseService.js\"></script> <script src=\"scripts/controllers/oneRepMaxCalculator.js\"></script> <script src=\"scripts/services/oneRepMaxCalculatorService.js\"></script> <script src=\"scripts/directives/optionsButton/optionsButton.js\"></script> <script src=\"scripts/directives/optionsButton/optionsButtonService.js\"></script> <!-- endbuild --> </body> </html>"
+    "       ga('send', 'pageview');</script> <!-- build:js(.) scripts/vendor.js --> <!-- bower:js --> <script src=\"bower_components/angular/angular.js\"></script> <script src=\"bower_components/angular-animate/angular-animate.js\"></script> <script src=\"bower_components/angular-aria/angular-aria.js\"></script> <script src=\"bower_components/angular-cookies/angular-cookies.js\"></script> <script src=\"bower_components/angular-messages/angular-messages.js\"></script> <script src=\"bower_components/angular-resource/angular-resource.js\"></script> <script src=\"bower_components/angular-route/angular-route.js\"></script> <script src=\"bower_components/angular-sanitize/angular-sanitize.js\"></script> <script src=\"bower_components/angular-touch/angular-touch.js\"></script> <script src=\"bower_components/angular-material/angular-material.js\"></script> <script src=\"bower_components/angular-local-storage/dist/angular-local-storage.js\"></script> <script src=\"bower_components/angular-material-expansion-panel/dist/md-expansion-panel.js\"></script> <!-- endbower --> <!-- endbuild --> <!-- build:js({.tmp,app}) scripts/scripts.js --> <script src=\"scripts/app.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBar.js\"></script> <script src=\"scripts/controllers/dashboard.js\"></script> <script src=\"scripts/controllers/programList.js\"></script> <script src=\"scripts/controllers/addProgram.js\"></script> <script src=\"scripts/controllers/addProgramType.js\"></script> <script src=\"scripts/controllers/programTypeList.js\"></script> <script src=\"scripts/services/addProgramTypeService.js\"></script> <script src=\"scripts/services/programTypeService.js\"></script> <script src=\"scripts/services/exerciseTypeService.js\"></script> <script src=\"scripts/services/utilService.js\"></script> <script src=\"scripts/directives/addRemove/addRemove.js\"></script> <script src=\"scripts/directives/addProgramType/addProgramType.js\"></script> <script src=\"scripts/directives/addProgramType/header/addProgramTypeHeader.js\"></script> <script src=\"scripts/directives/addProgramType/header/addProgramTypeHeaderService.js\"></script> <script src=\"scripts/directives/addProgramType/exercise/addProgramTypeExercise.js\"></script> <script src=\"scripts/directives/addProgramType/exercise/addProgramTypeExerciseService.js\"></script> <script src=\"scripts/directives/addProgramType/week/addProgramTypeWeek.js\"></script> <script src=\"scripts/directives/addProgramType/week/addProgramTypeWeekService.js\"></script> <script src=\"scripts/directives/addProgramType/day/addProgramTypeDay.js\"></script> <script src=\"scripts/directives/addProgramType/day/addProgramTypeDayService.js\"></script> <script src=\"scripts/directives/addProgramType/set/addProgramTypeSet.js\"></script> <script src=\"scripts/directives/addProgramType/set/addProgramTypeSetService.js\"></script> <script src=\"scripts/services/storageService.js\"></script> <script src=\"scripts/services/keyHandlerService.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeList.js\"></script> <script src=\"scripts/directives/list/list.js\"></script> <script src=\"scripts/directives/programTypeList/programTypeListService.js\"></script> <script src=\"scripts/controllers/programTypeInformation.js\"></script> <script src=\"scripts/controllers/programInformation.js\"></script> <script src=\"scripts/services/programTypeInformationService.js\"></script> <script src=\"scripts/directives/addProgram/addProgram.js\"></script> <script src=\"scripts/directives/programList/programList.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeader.js\"></script> <script src=\"scripts/directives/addProgram/addProgramHeaderService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExerciseService.js\"></script> <script src=\"scripts/directives/addProgram/addProgramExercise.js\"></script> <script src=\"scripts/services/programService.js\"></script> <script src=\"scripts/directives/programList/programListService.js\"></script> <script src=\"scripts/services/programInformationService.js\"></script> <script src=\"scripts/controllers/editProgram.js\"></script> <script src=\"scripts/services/addProgramService.js\"></script> <script src=\"scripts/controllers/editProgramType.js\"></script> <script src=\"scripts/directives/messageCard/messageCard.js\"></script> <script src=\"scripts/services/toastService.js\"></script> <script src=\"scripts/services/defaultProgramTypeService.js\"></script> <script src=\"scripts/services/unitService.js\"></script> <script src=\"scripts/services/dashboardService.js\"></script> <script src=\"scripts/directives/highlightCard/highlightCard.js\"></script> <script src=\"scripts/directives/quickComplete/quickComplete.js\"></script> <script src=\"scripts/directives/quickComplete/quickCompleteService.js\"></script> <script src=\"scripts/services/recentlyActiveService.js\"></script> <script src=\"scripts/directives/help/helpService.js\"></script> <script src=\"scripts/directives/help/help.js\"></script> <script src=\"scripts/controllers/dialogController.js\"></script> <script src=\"scripts/directives/bottomNavigationBar/bottomNavigationBar.js\"></script> <script src=\"scripts/controllers/settings.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSetting.js\"></script> <script src=\"scripts/directives/weightUnitSetting/weightUnitSettingService.js\"></script> <script src=\"scripts/services/programconversionservice.js\"></script> <script src=\"scripts/services/adWeightService.js\"></script> <script src=\"scripts/services/adTriggerService.js\"></script> <script src=\"scripts/services/sideNavigationService.js\"></script> <script src=\"scripts/directives/navigationBar/navigationBarService.js\"></script> <script src=\"scripts/controllers/upgrade.js\"></script> <script src=\"scripts/controllers/contact.js\"></script> <script src=\"scripts/controllers/help.js\"></script> <script src=\"scripts/directives/resetSetting/resetSetting.js\"></script> <script src=\"scripts/directives/resetSetting/resetSettingService.js\"></script> <script src=\"scripts/directives/dashboardProgramList/dashboardProgramList.js\"></script> <script src=\"scripts/directives/listEmpty/listEmpty.js\"></script> <script src=\"scripts/services/programTypeLevelService.js\"></script> <script src=\"scripts/directives/listFilter/listFilter.js\"></script> <script src=\"scripts/directives/orderList/orderList.js\"></script> <script src=\"scripts/directives/orderList/orderListService.js\"></script> <script src=\"scripts/directives/listFilter/listFilterService.js\"></script> <script src=\"scripts/services/programcompleteservice.js\"></script> <script src=\"scripts/services/setTypeService.js\"></script> <script src=\"scripts/directives/addProgramType/set/setInformation/addProgramTypeSetType.js\"></script> <script src=\"scripts/directives/addProgramType/set/setType/addProgramTypeSetTypeNormal.js\"></script> <script src=\"scripts/directives/addProgramType/set/exerciseType/addProgramTypeSetExerciseWeighted.js\"></script> <script src=\"scripts/directives/addProgramType/set/setInformation/addProgramTypeSetExerciseSelect.js\"></script> <script src=\"scripts/directives/addProgramType/set/setInformation/addProgramTypeSetNumberOfSets.js\"></script> <script src=\"scripts/directives/addProgramType/set/exerciseType/addProgramTypeSetExerciseNonWeighted.js\"></script> <script src=\"scripts/directives/addProgramType/set/exerciseType/addProgramTypeSetExerciseCardio.js\"></script> <script src=\"scripts/directives/addProgramType/set/setType/addProgramTypeSetTypeSuperset.js\"></script> <script src=\"scripts/directives/addProgramType/set/setType/addProgramTypeSetTypeSupersetService.js\"></script> <script src=\"scripts/directives/addProgramType/set/setType/addprogramtypesettypenormalservice.js\"></script> <script src=\"scripts/services/addProgramTypeSetExerciseService.js\"></script> <script src=\"scripts/controllers/oneRepMaxCalculator.js\"></script> <script src=\"scripts/services/oneRepMaxCalculatorService.js\"></script> <script src=\"scripts/directives/optionsButton/optionsButton.js\"></script> <script src=\"scripts/directives/optionsButton/optionsButtonService.js\"></script> <script src=\"scripts/controllers/barbellplatecalculator.js\"></script> <script src=\"scripts/services/barbellplatecalculatorservice.js\"></script> <script src=\"scripts/directives/barbellPlates/barbellPlates.js\"></script> <script src=\"scripts/directives/barbellPlates/barbellPlatesService.js\"></script> <!-- endbuild --> </body> </html>"
   );
 
 
@@ -12454,6 +12820,11 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
   );
 
 
+  $templateCache.put('scripts/directives/barbellPlates/barbellPlatesView.html',
+    "<div layout=\"column\" layout-align=\"center center\"> <div layout=\"row\" layout-align=\"center center\" layout-wrap> <div ng-repeat=\"plate in plates\" layout-align=\"center center\" flex=\"25\"> <div class=\"plate-dimensions margin-top-4 margin-bottom-4\" layout=\"column\" layout-align=\"center center\" md-colors=\"{ background: '{{plate.color}}' }\"> <span class=\"font-weight-600 padding-bottom-4\">{{plate.value}}{{unit.textName}}</span> <span class=\"font-weight-600 padding-top-4\" ng-if=\"plate.number\">{{plate.number}}</span> <span class=\"font-weight-600 padding-top-4\" ng-if=\"!plate.number\">0</span> </div> </div> </div> </div>"
+  );
+
+
   $templateCache.put('scripts/directives/bottomNavigationBar/bottomNavigationBarView.html',
     "<div layout=\"row\"> <md-toolbar md-colors=\"{ background: 'primary-50'}\"> <div class=\"md-toolbar-tools\"> <a class=\"icon-width\" ng-href=\"#/add-program\" aria-label=\"Add Program\"> <div class=\"navbar-height\" layout=\"column\" layout-align=\"center center\"> <div> <md-icon class=\"black-icon\" md-svg-icon=\"images/icons/checkBlack.svg\"></md-icon> </div> <div> <span class=\"icon-text truncate-text\">Add Program</span> </div> </div> </a> <a class=\"icon-width\" ng-href=\"#/program-list\" aria-label=\"Program List\"> <div class=\"navbar-height\" layout=\"column\" layout-align=\"center center\"> <div> <md-icon class=\"black-icon\" md-svg-icon=\"images/icons/listCheckBlack.svg\"></md-icon> </div> <div> <span class=\"icon-text truncate-text\">Program List</span> </div> </div> </a> <span flex></span> <span flex></span> <a class=\"icon-width\" ng-href=\"#/add-program-type\" aria-label=\"Add Program Type\"> <div class=\"navbar-height\" layout=\"column\" layout-align=\"center center\"> <div> <md-icon class=\"black-icon\" md-svg-icon=\"images/icons/addBlack.svg\"></md-icon> </div> <div> <span class=\"icon-text truncate-text\">Add Type</span> </div> </div> </a> <a class=\"icon-width\" ng-href=\"#/program-type-list\" aria-label=\"Program Type List\"> <div class=\"navbar-height\" layout=\"column\" layout-align=\"center center\"> <div> <md-icon class=\"black-icon\" md-svg-icon=\"images/icons/listAddBlack.svg\"></md-icon> </div> <div> <span class=\"icon-text truncate-text\">Type List</span> </div> </div> </a> </div> </md-toolbar> </div>"
   );
@@ -12559,6 +12930,11 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
   );
 
 
+  $templateCache.put('views/barbellPlateCalculator.html',
+    "<div layout=\"column\" layout-padding> <div layout=\"column\"> <!-- Target Weight and Barbell Weight Card --> <md-card> <md-card-header class=\"no-padding-right\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header-text layout=\"row\"> <div layout=\"row\" layout-align=\"center center\" flex=\"grow\"> <span class=\"font-weight-600\" flex=\"grow\">Barbell Plate Calculator</span> <help template-url=\"helpUrl\" flex=\"nogrow\"></help> </div> </md-card-header-text> </md-card-header> <md-card-content> <form name=\"barbellPlateCalculatorForm\" layout=\"column\"> <md-input-container class=\"no-margin-top margin-bottom-8\"> <label>Target Weight ({{unit.textName}})</label> <input name=\"targetWeight\" ng-model=\"targetWeight\" type=\"number\" step=\"{{unit.interval}}\" min=\"0\" required md-no-asterisk=\"true\"> <div ng-messages=\"barbellPlateCalculatorForm.targetWeight.$error\"> <div ng-message=\"required\">A target weight is required.</div> <div ng-message=\"min\">Must be greater than 0.</div> </div> </md-input-container> <md-input-container class=\"no-margin-top no-margin-bottom\"> <label>Barbell Weight ({{unit.textName}})</label> <input name=\"barbellWeight\" ng-model=\"barbellWeight\" type=\"number\" step=\"{{unit.interval}}\" min=\"0\" required md-no-asterisk=\"true\"> <div ng-messages=\"barbellPlateCalculatorForm.barbellWeight.$error\"> <div ng-message=\"required\">A barbell weight is required.</div> <div ng-message=\"min\">Must be greater than 0.</div> </div> </md-input-container> </form> </md-card-content> </md-card> <!-- Barbell Plates Card --> <md-card> <md-card-header class=\"no-padding-right\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header-text layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <span class=\"font-weight-600\">Barbell Plates</span> </div> </md-card-header-text> </md-card-header> <md-card-content layout=\"column\" layout-align=\"center center\"> <p class=\"font-weight-600\">On each side of the bar</p> <barbell-plates unit=\"unit\" plates=\"plates\"></barbell-plates> </md-card-content> </md-card> <!-- Plates Available Card --> <md-card> <md-card-header class=\"no-padding-right\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header-text layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <span class=\"font-weight-600\">Plate Configuration</span> </div> </md-card-header-text> </md-card-header> <md-card-content> <div layout=\"row\" layout-align=\"none center\"> <div layout=\"column\"> <p class=\"width-44 font-weight-600\"></p> </div> <div class=\"width-80 padding-left-8 padding-right-8\" layout=\"column\" layout-align=\"center center\"> <p class=\"font-weight-600\">Plate</p> </div> <div layout=\"column\" layout-align=\"center center\" flex> <p class=\"font-weight-600\" flex>Plates Available</p> </div> </div> <div layout=\"row\" class=\"margin-bottom-16\" ng-repeat=\"currentWeight in currentWeights.weights\" layout-align=\"none center\"> <md-switch ng-model=\"currentWeight.enabled\" aria-label=\"Current Weight Switch\"></md-switch> <div class=\"width-80 padding-left-8 padding-right-8\" layout=\"column\" layout-align=\"center center\"> <span class=\"font-weight-600\">{{currentWeight.value}}{{unit.textName}}</span> </div> <div layout=\"column\" flex> <md-select class=\"no-margin-top no-margin-bottom\" ng-model=\"currentWeight.available\" placeholder=\"Amount Available\" ng-disabled=\"!currentWeight.enabled\"> <md-option ng-repeat=\"value in range\" ng-selected=\"currentWeight.available === value + 1\" ng-value=\"{{value + 1}}\">{{value + 1}}</md-option> </md-select> </div> </div> </md-card-content> </md-card> </div> </div>"
+  );
+
+
   $templateCache.put('views/contact.html',
     "<div layout=\"column\" layout-padding> <div layout=\"column\"> <md-card> <md-card-header class=\"no-padding-right\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header-text layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <span class=\"font-weight-600\">Contact</span> </div> </md-card-header-text> </md-card-header> <md-card-content> <div layout=\"row\" layout-align=\"center center\" flex> <md-icon class=\"margin-right-16\" md-svg-icon=\"images/icons/email.svg\" flex=\"nogrow\"></md-icon> <span flex=\"grow\">{{email}}</span> </div> </md-card-content> </md-card> </div> </div>"
   );
@@ -12581,6 +12957,11 @@ angular.module('powerHouseApp').run(['$templateCache', function($templateCache) 
 
   $templateCache.put('views/help.html',
     "<div layout=\"column\" layout-padding> <div layout=\"column\"> <md-card> <md-card-header class=\"no-padding-right\" md-colors=\"{ 'background' : 'primary-50' }\"> <md-card-header-text layout=\"row\"> <div layout=\"column\" layout-align=\"center none\" flex=\"grow\"> <span class=\"font-weight-600\">Help</span> </div> </md-card-header-text> </md-card-header> <md-card-content layout=\"column\"> <div class=\"padding-bottom-24\" layout=\"column\"> <span class=\"padding-bottom-4 font-weight-600\">About</span> <md-divider></md-divider> <p class=\"no-margin-bottom\">Powerhouse is an application that makes it easy to track tailored workout programs.</p> <p class=\"no-margin-bottom\">Custom programs can be entered, allowing for unlimited customization and freedom to design and plan workouts.</p> </div> <div class=\"padding-bottom-24\" layout=\"column\"> <span class=\"padding-bottom-4 font-weight-600\">Getting Started</span> <md-divider></md-divider> <p>To get started simply add a new program based off of a pre-defined program type or start by defining a program type yourself.</p> <div layout=\"row\" layout-align=\"center center\"> <div layout=\"column\" flex> <md-button class=\"md-raised\" ng-href=\"#/add-program\">Add Program</md-button> </div> <div layout=\"column\" flex> <md-button class=\"md-raised\" ng-href=\"#/add-program-type\">Add Type</md-button> </div> </div> <p class=\"no-margin-bottom\">Once the program is created the application will automatically calculate your tailored workout.</p> <p>From here find your program in the program list, once found click on the program to view and complete the components of the workout.</p> <div layout=\"row\" layout-align=\"center center\"> <md-button class=\"md-raised\" ng-href=\"#/program-list\">Program List</md-button> </div> </div> <div class=\"padding-bottom-24\" layout=\"column\"> <span class=\"padding-bottom-4 font-weight-600\">Programs</span> <md-divider></md-divider> <p class=\"no-margin-bottom\">A program is a tailored workout based off of a program type.</p> <p class=\"no-margin-bottom\">Each program will contain a number of weeks and days. Each day will have a number of sets with exercises that are intented to be complete.</p> <p>Once a set exercise is complete mark it as done by checking the checkbox. This will automatically update the percentage completion of the program.</p> <div layout=\"row\" layout-align=\"center center\"> <md-button class=\"md-raised\" ng-href=\"#/add-program\">Add Program</md-button> </div> </div> <div class=\"padding-bottom-24\" layout=\"column\"> <span class=\"padding-bottom-4 font-weight-600\">Program Types</span> <md-divider></md-divider> <p class=\"no-margin-bottom\">A program type is a scaffold used to create tailored workouts. Complete customization is available to cater for a wide range of potential workouts.</p> <div layout=\"row\" layout-align=\"center center\"> <md-button class=\"md-raised\" ng-href=\"#/add-program-type\">Add Program Type</md-button> </div> </div> </md-card-content> </md-card> </div> </div>"
+  );
+
+
+  $templateCache.put('views/helpBarbellPlateCalculator.html',
+    "<md-dialog aria-label=\"{{ariaLabel}}\"> <form ng-cloak> <md-dialog-content> <div class=\"md-dialog-content\"> <h3>Barbell Plate Calculator</h3> <p>First configure the amount and weight denominations that are available.</p> <p>Enter the barbell weight (usually 20kgs or 45lbs) and then enter the required total target weight.</p> <p>The plate combinations for one side of the barbell will be shown.</p> </div> </md-dialog-content> <md-dialog-actions layout=\"row\"> <md-button ng-click=\"hideDialog()\">Ok</md-button> </md-dialog-actions> </form> </md-dialog>"
   );
 
 
